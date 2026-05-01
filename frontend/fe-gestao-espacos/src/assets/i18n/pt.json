@@ -1,0 +1,150 @@
+{
+  "app": {
+    "subtitle": "Gestão de espaços de ensino"
+  },
+  "common": {
+    "actions": "Ações",
+    "add": "Adicionar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "save": "Salvar",
+    "itemsPerPage": "Itens por página:",
+    "previous": "Página anterior",
+    "next": "Próxima página"
+  },
+  "validation": {
+    "name": "Informe pelo menos 3 caracteres.",
+    "email": "Informe um e-mail válido.",
+    "password": "Informe pelo menos 6 caracteres.",
+    "spaceName": "Informe pelo menos 3 caracteres.",
+    "capacity": "Informe uma capacidade maior que zero."
+  },
+  "dashboard": {
+    "title": "Painel de ocupação",
+    "refresh": "Atualizar dados",
+    "logout": "Sair",
+    "notifications": "Notificações",
+    "metrics": "Métricas do painel",
+    "occupancyRate": "Taxa de ocupação",
+    "activePresences": "Presenças ativas",
+    "registeredStudents": "Usuários cadastrados",
+    "totalCapacity": "Capacidade em uso",
+    "charts": {
+      "label": "Gráficos de ocupação",
+      "capacityUsage": "Uso da capacidade",
+      "occupancyOverview": "Resumo geral",
+      "occupied": "Ocupados",
+      "available": "Livres",
+      "bySpace": "Por ambiente",
+      "occupancyBySpace": "Ocupação por ambiente",
+      "empty": "Nenhum dado de ocupação disponível."
+    },
+    "sections": {
+      "label": "Menu de seções",
+      "overview": "Visão geral",
+      "overviewDescription": "Indicadores e ocupação",
+      "attendance": "Presença",
+      "attendanceDescription": "Entrada e saída",
+      "students": "Usuários",
+      "studentsDescription": "Cadastro e consulta",
+      "spaces": "Ambientes",
+      "spacesDescription": "Salas e capacidade"
+    },
+    "loadError": "Não foi possível carregar os dados. Verifique se o backend está ativo.",
+    "actionError": "Não foi possível concluir a ação. Revise os dados e tente novamente.",
+    "forbidden": "Você não tem permissão para acessar ou executar esta ação."
+  },
+  "login": {
+    "title": "Acesse o painel",
+    "description": "Controle entradas, saídas e capacidade dos ambientes de ensino em tempo real.",
+    "formLabel": "Formulário de login",
+    "email": "E-mail",
+    "emailPlaceholder": "nome@instituição.edu",
+    "password": "Senha",
+    "passwordPlaceholder": "Sua senha",
+    "submit": "Entrar",
+    "loading": "Entrando",
+    "error": "Credenciais inválidas."
+  },
+  "students": {
+    "title": "Usuários",
+    "registry": "Cadastro",
+    "new": "Novo usuário",
+    "create": "Cadastrar usuário",
+    "created": "Usuário cadastrado com sucesso.",
+    "updated": "Usuário atualizado com sucesso.",
+    "deleted": "Usuário removido com sucesso.",
+    "name": "Usuário",
+    "email": "E-mail",
+    "password": "Senha",
+    "passwordOptional": "Senha",
+    "passwordOptionalPlaceholder": "Deixe em branco para manter a senha atual",
+    "placeholders": {
+      "ADMIN": {
+        "name": "Digite o nome do administrador",
+        "email": "admin@email.com",
+        "password": "Senha do administrador"
+      },
+      "MONITOR": {
+        "name": "Digite o nome do monitor",
+        "email": "monitor@email.com",
+        "password": "Senha do monitor"
+      },
+      "STUDENT": {
+        "name": "Digite o nome do aluno",
+        "email": "aluno@email.com",
+        "password": "Senha do aluno"
+      }
+    },
+    "role": "Perfil",
+    "roleFilter": "Filtrar por perfil",
+    "allRoles": "Todos os perfis",
+    "select": "Selecione um aluno ou monitor",
+    "search": "Buscar usuário",
+    "delete": "Remover usuário",
+    "empty": "Nenhum usuário encontrado."
+  },
+  "roles": {
+    "ADMIN": "Administrador",
+    "MONITOR": "Monitor",
+    "STUDENT": "Aluno"
+  },
+  "spaces": {
+    "title": "Ambientes",
+    "overview": "Ambientes",
+    "occupancy": "Ocupação por ambiente",
+    "highest": "Maior ocupação",
+    "occupied": "Ocupados",
+    "available": "Livres",
+    "empty": "Nenhum ambiente cadastrado.",
+    "new": "Novo ambiente",
+    "create": "Cadastrar ambiente",
+    "created": "Ambiente cadastrado com sucesso.",
+    "deleted": "Ambiente removido com sucesso.",
+    "name": "Ambiente",
+    "type": "Tipo",
+    "capacity": "Capacidade",
+    "select": "Selecione um ambiente",
+    "delete": "Remover ambiente"
+  },
+  "spaceTypes": {
+    "classroom": "Sala de aula",
+    "laboratory": "Laboratório",
+    "study": "Sala de estudos"
+  },
+  "attendance": {
+    "live": "Agora",
+    "active": "Presenças ativas",
+    "entryAt": "Entrada",
+    "empty": "Não há presenças ativas.",
+    "quickAction": "Ação rápida",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "registerEntry": "Registrar entrada",
+    "registerExit": "Registrar saída",
+    "currentUser": "Usuário logado",
+    "studentFlow": "Você pode registrar sua própria entrada e saída. A visualização de presenças ativas é exclusiva para monitores.",
+    "checkedIn": "Entrada registrada com sucesso.",
+    "checkedOut": "Saída registrada com sucesso."
+  }
+}

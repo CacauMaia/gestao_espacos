@@ -1,0 +1,150 @@
+{
+  "app": {
+    "subtitle": "Gestion de espacios educativos"
+  },
+  "common": {
+    "actions": "Acciones",
+    "add": "Agregar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "save": "Guardar",
+    "itemsPerPage": "Items por pagina:",
+    "previous": "Pagina anterior",
+    "next": "Pagina siguiente"
+  },
+  "validation": {
+    "name": "Ingresa al menos 3 caracteres.",
+    "email": "Ingresa un correo valido.",
+    "password": "Ingresa al menos 6 caracteres.",
+    "spaceName": "Ingresa al menos 3 caracteres.",
+    "capacity": "Ingresa una capacidad mayor que cero."
+  },
+  "dashboard": {
+    "title": "Panel de ocupacion",
+    "refresh": "Actualizar datos",
+    "logout": "Salir",
+    "notifications": "Notificaciones",
+    "metrics": "Metricas del panel",
+    "occupancyRate": "Tasa de ocupacion",
+    "activePresences": "Presencias activas",
+    "registeredStudents": "Usuarios registrados",
+    "totalCapacity": "Capacidad en uso",
+    "charts": {
+      "label": "Graficos de ocupacion",
+      "capacityUsage": "Uso de capacidad",
+      "occupancyOverview": "Resumen general",
+      "occupied": "Ocupados",
+      "available": "Libres",
+      "bySpace": "Por espacio",
+      "occupancyBySpace": "Ocupacion por espacio",
+      "empty": "No hay datos de ocupacion disponibles."
+    },
+    "sections": {
+      "label": "Menu de secciones",
+      "overview": "Vista general",
+      "overviewDescription": "Indicadores y ocupacion",
+      "attendance": "Presencia",
+      "attendanceDescription": "Entrada y salida",
+      "students": "Usuarios",
+      "studentsDescription": "Registro y busqueda",
+      "spaces": "Espacios",
+      "spacesDescription": "Salas y capacidad"
+    },
+    "loadError": "No fue posible cargar los datos. Verifica si el backend esta activo.",
+    "actionError": "No fue posible completar la accion. Revisa los datos e intenta nuevamente.",
+    "forbidden": "No tienes permiso para acceder o ejecutar esta accion."
+  },
+  "login": {
+    "title": "Accede al panel",
+    "description": "Controla entradas, salidas y capacidad de los espacios educativos en tiempo real.",
+    "formLabel": "Formulario de inicio de sesion",
+    "email": "Correo",
+    "emailPlaceholder": "nombre@institucion.edu",
+    "password": "Contrasena",
+    "passwordPlaceholder": "Tu contrasena",
+    "submit": "Entrar",
+    "loading": "Entrando",
+    "error": "Credenciales invalidas."
+  },
+  "students": {
+    "title": "Usuarios",
+    "registry": "Registro",
+    "new": "Nuevo usuario",
+    "create": "Crear usuario",
+    "created": "Usuario creado con exito.",
+    "updated": "Usuario actualizado con exito.",
+    "deleted": "Usuario eliminado con exito.",
+    "name": "Usuario",
+    "email": "Correo",
+    "password": "Contrasena",
+    "passwordOptional": "Contrasena",
+    "passwordOptionalPlaceholder": "Deja en blanco para mantener la contrasena actual",
+    "placeholders": {
+      "ADMIN": {
+        "name": "Escribe el nombre del administrador",
+        "email": "admin@email.com",
+        "password": "Contrasena del administrador"
+      },
+      "MONITOR": {
+        "name": "Escribe el nombre del monitor",
+        "email": "monitor@email.com",
+        "password": "Contrasena del monitor"
+      },
+      "STUDENT": {
+        "name": "Escribe el nombre del estudiante",
+        "email": "estudiante@email.com",
+        "password": "Contrasena del estudiante"
+      }
+    },
+    "role": "Perfil",
+    "roleFilter": "Filtrar por perfil",
+    "allRoles": "Todos los perfiles",
+    "select": "Selecciona un estudiante o monitor",
+    "search": "Buscar usuario",
+    "delete": "Eliminar usuario",
+    "empty": "No se encontraron usuarios."
+  },
+  "roles": {
+    "ADMIN": "Administrador",
+    "MONITOR": "Monitor",
+    "STUDENT": "Estudiante"
+  },
+  "spaces": {
+    "title": "Espacios",
+    "overview": "Espacios",
+    "occupancy": "Ocupacion por espacio",
+    "highest": "Mayor ocupacion",
+    "occupied": "Ocupados",
+    "available": "Libres",
+    "empty": "No hay espacios registrados.",
+    "new": "Nuevo espacio",
+    "create": "Crear espacio",
+    "created": "Espacio creado con exito.",
+    "deleted": "Espacio eliminado con exito.",
+    "name": "Espacio",
+    "type": "Tipo",
+    "capacity": "Capacidad",
+    "select": "Selecciona un espacio",
+    "delete": "Eliminar espacio"
+  },
+  "spaceTypes": {
+    "classroom": "Aula",
+    "laboratory": "Laboratorio",
+    "study": "Sala de estudio"
+  },
+  "attendance": {
+    "live": "Ahora",
+    "active": "Presencias activas",
+    "entryAt": "Entrada",
+    "empty": "No hay presencias activas.",
+    "quickAction": "Accion rapida",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "registerEntry": "Registrar entrada",
+    "registerExit": "Registrar salida",
+    "currentUser": "Usuario conectado",
+    "studentFlow": "Puedes registrar tu propia entrada y salida. La visualizacion de presencias activas es exclusiva para monitores.",
+    "checkedIn": "Entrada registrada con exito.",
+    "checkedOut": "Salida registrada con exito."
+  }
+}

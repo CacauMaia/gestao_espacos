@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+.nyc_output/
+.angular/cache/
+out-tsc/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Runtime/temp files
+tmp/
+temp/
+.tmp/
+.temp/
+pids/
+*.pid
+*.pid.lock
+*.seed
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Local Codex/session files
+.codex
+.codex/
+
+# Database strategy for this project: consolidated schema only
+database/migrations/

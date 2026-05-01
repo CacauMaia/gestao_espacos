@@ -1,0 +1,150 @@
+{
+  "app": {
+    "subtitle": "Teaching space management"
+  },
+  "common": {
+    "actions": "Actions",
+    "add": "Add",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "save": "Save",
+    "itemsPerPage": "Items per page:",
+    "previous": "Previous page",
+    "next": "Next page"
+  },
+  "validation": {
+    "name": "Enter at least 3 characters.",
+    "email": "Enter a valid email.",
+    "password": "Enter at least 6 characters.",
+    "spaceName": "Enter at least 3 characters.",
+    "capacity": "Enter a capacity greater than zero."
+  },
+  "dashboard": {
+    "title": "Occupancy dashboard",
+    "refresh": "Refresh data",
+    "logout": "Sign out",
+    "notifications": "Notifications",
+    "metrics": "Dashboard metrics",
+    "occupancyRate": "Occupancy rate",
+    "activePresences": "Active presences",
+    "registeredStudents": "Registered users",
+    "totalCapacity": "Capacity in use",
+    "charts": {
+      "label": "Occupancy charts",
+      "capacityUsage": "Capacity usage",
+      "occupancyOverview": "Overall summary",
+      "occupied": "Occupied",
+      "available": "Available",
+      "bySpace": "By space",
+      "occupancyBySpace": "Occupancy by space",
+      "empty": "No occupancy data available."
+    },
+    "sections": {
+      "label": "Section menu",
+      "overview": "Overview",
+      "overviewDescription": "Metrics and occupancy",
+      "attendance": "Attendance",
+      "attendanceDescription": "Entry and exit",
+      "students": "Users",
+      "studentsDescription": "Registry and search",
+      "spaces": "Spaces",
+      "spacesDescription": "Rooms and capacity"
+    },
+    "loadError": "Could not load data. Check whether the backend is running.",
+    "actionError": "Could not complete the action. Review the data and try again.",
+    "forbidden": "You do not have permission to access or perform this action."
+  },
+  "login": {
+    "title": "Access the panel",
+    "description": "Control entries, exits, and teaching space capacity in real time.",
+    "formLabel": "Login form",
+    "email": "Email",
+    "emailPlaceholder": "name@institution.edu",
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "submit": "Sign in",
+    "loading": "Signing in",
+    "error": "Invalid credentials."
+  },
+  "students": {
+    "title": "Users",
+    "registry": "Registry",
+    "new": "New user",
+    "create": "Create user",
+    "created": "User created successfully.",
+    "updated": "User updated successfully.",
+    "deleted": "User removed successfully.",
+    "name": "User",
+    "email": "Email",
+    "password": "Password",
+    "passwordOptional": "Password",
+    "passwordOptionalPlaceholder": "Leave blank to keep the current password",
+    "placeholders": {
+      "ADMIN": {
+        "name": "Type the administrator name",
+        "email": "admin@email.com",
+        "password": "Administrator password"
+      },
+      "MONITOR": {
+        "name": "Type the monitor name",
+        "email": "monitor@email.com",
+        "password": "Monitor password"
+      },
+      "STUDENT": {
+        "name": "Type the student name",
+        "email": "student@email.com",
+        "password": "Student password"
+      }
+    },
+    "role": "Role",
+    "roleFilter": "Filter by role",
+    "allRoles": "All roles",
+    "select": "Select a student or monitor",
+    "search": "Search user",
+    "delete": "Remove user",
+    "empty": "No users found."
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "MONITOR": "Monitor",
+    "STUDENT": "Student"
+  },
+  "spaces": {
+    "title": "Spaces",
+    "overview": "Spaces",
+    "occupancy": "Occupancy by space",
+    "highest": "Highest occupancy",
+    "occupied": "Occupied",
+    "available": "Available",
+    "empty": "No spaces registered.",
+    "new": "New space",
+    "create": "Create space",
+    "created": "Space created successfully.",
+    "deleted": "Space removed successfully.",
+    "name": "Space",
+    "type": "Type",
+    "capacity": "Capacity",
+    "select": "Select a space",
+    "delete": "Remove space"
+  },
+  "spaceTypes": {
+    "classroom": "Classroom",
+    "laboratory": "Laboratory",
+    "study": "Study room"
+  },
+  "attendance": {
+    "live": "Live",
+    "active": "Active presences",
+    "entryAt": "Entry",
+    "empty": "There are no active presences.",
+    "quickAction": "Quick action",
+    "checkIn": "Check in",
+    "checkOut": "Check out",
+    "registerEntry": "Register entry",
+    "registerExit": "Register exit",
+    "currentUser": "Signed-in user",
+    "studentFlow": "You can register your own entry and exit. Active presence visibility is available only to monitors.",
+    "checkedIn": "Entry registered successfully.",
+    "checkedOut": "Exit registered successfully."
+  }
+}

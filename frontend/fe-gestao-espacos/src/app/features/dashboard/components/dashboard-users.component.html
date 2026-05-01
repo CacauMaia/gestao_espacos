@@ -1,0 +1,171 @@
+<section class="content-grid students-layout" data-test="users-section">
+  <section class="panel compact" aria-labelledby="new-student-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ 'students.new' | transloco }}</p>
+        <h2 id="new-student-title">{{ 'students.create' | transloco }}</h2>
+      </div>
+    </div>
+
+    @if (isEditingUser()) {
+      <form [formGroup]="editUserForm()" (ngSubmit)="updateUser()" data-test="user-edit-form">
+        <label>
+          <span>{{ 'students.name' | transloco }}</span>
+          <input formControlName="name" type="text" />
+          @if (editUserForm().controls.name.touched && editUserForm().controls.name.invalid) {
+            <small class="field-error">{{ 'validation.name' | transloco }}</small>
+          }
+        </label>
+        <label>
+          <span>{{ 'students.email' | transloco }}</span>
+          <input formControlName="email" type="email" />
+          @if (editUserForm().controls.email.touched && editUserForm().controls.email.invalid) {
+            <small class="field-error">{{ 'validation.email' | transloco }}</small>
+          }
+        </label>
+        <label>
+          <span>{{ 'students.passwordOptional' | transloco }}</span>
+          <input formControlName="password" type="password" [placeholder]="'students.passwordOptionalPlaceholder' | transloco" />
+        </label>
+        <label>
+          <span>{{ 'students.role' | transloco }}</span>
+          <select formControlName="role">
+            <option value="STUDENT">{{ 'roles.STUDENT' | transloco }}</option>
+            <option value="MONITOR">{{ 'roles.MONITOR' | transloco }}</option>
+            <option value="ADMIN">{{ 'roles.ADMIN' | transloco }}</option>
+          </select>
+        </label>
+        <button class="primary-action" type="submit" [disabled]="!canSubmitUserUpdate()">
+          <lucide-icon name="Save" size="18" />
+          <span>{{ 'common.save' | transloco }}</span>
+        </button>
+        <button class="secondary-action" type="button" (click)="cancelUserEdit()">
+          <lucide-icon name="X" size="18" />
+          <span>{{ 'common.cancel' | transloco }}</span>
+        </button>
+      </form>
+    } @else {
+      <form [formGroup]="studentForm()" (ngSubmit)="createUser()" data-test="user-create-form">
+        <label>
+          <span>{{ 'students.name' | transloco }}</span>
+          <input formControlName="name" type="text" [placeholder]="studentNamePlaceholderKey() | transloco" />
+          @if (studentForm().controls.name.touched && studentForm().controls.name.invalid) {
+            <small class="field-error">{{ 'validation.name' | transloco }}</small>
+          }
+        </label>
+        <label>
+          <span>{{ 'students.email' | transloco }}</span>
+          <input formControlName="email" type="email" [placeholder]="studentEmailPlaceholderKey() | transloco" />
+          @if (studentForm().controls.email.touched && studentForm().controls.email.invalid) {
+            <small class="field-error">{{ 'validation.email' | transloco }}</small>
+          }
+        </label>
+        <label>
+          <span>{{ 'students.password' | transloco }}</span>
+          <input formControlName="password" type="password" [placeholder]="studentPasswordPlaceholderKey() | transloco" />
+          @if (studentForm().controls.password.touched && studentForm().controls.password.invalid) {
+            <small class="field-error">{{ 'validation.password' | transloco }}</small>
+          }
+        </label>
+        <label>
+          <span>{{ 'students.role' | transloco }}</span>
+          <select formControlName="role">
+            <option value="STUDENT">{{ 'roles.STUDENT' | transloco }}</option>
+            <option value="MONITOR">{{ 'roles.MONITOR' | transloco }}</option>
+            <option value="ADMIN">{{ 'roles.ADMIN' | transloco }}</option>
+          </select>
+        </label>
+        <button class="secondary-action" type="submit" [disabled]="!canSubmitStudent()">
+          <lucide-icon name="Plus" size="18" />
+          <span>{{ 'common.add' | transloco }}</span>
+        </button>
+      </form>
+    }
+  </section>
+
+  <section class="panel wide" aria-labelledby="students-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ 'students.registry' | transloco }}</p>
+        <h2 id="students-title">{{ 'students.title' | transloco }}</h2>
+      </div>
+
+      <div class="student-filters">
+        <label class="role-filter">
+          <span>{{ 'students.roleFilter' | transloco }}</span>
+          <select #roleFilter [value]="studentRoleFilter()" (change)="updateStudentRoleFilter(roleFilter.value)" data-test="user-role-filter">
+            <option value="ALL">{{ 'students.allRoles' | transloco }}</option>
+            <option value="ADMIN">{{ 'roles.ADMIN' | transloco }}</option>
+            <option value="MONITOR">{{ 'roles.MONITOR' | transloco }}</option>
+            <option value="STUDENT">{{ 'roles.STUDENT' | transloco }}</option>
+          </select>
+        </label>
+
+        <label class="search-field">
+          <lucide-icon name="Search" size="16" />
+          <input #searchInput type="search" [value]="searchQuery()" [placeholder]="'students.search' | transloco" (input)="updateSearchQuery(searchInput.value)" data-test="user-search-input" />
+        </label>
+      </div>
+    </div>
+
+    <div class="table-wrap table-panel" data-test="users-table">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ 'students.name' | transloco }}</th>
+            <th>{{ 'students.email' | transloco }}</th>
+            <th>{{ 'students.role' | transloco }}</th>
+            <th>{{ 'common.actions' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (student of users(); track student.id) {
+            <tr>
+              <td>{{ student.name }}</td>
+              <td>{{ student.email }}</td>
+              <td><app-status-pill tone="neutral">{{ student.role }}</app-status-pill></td>
+              <td>
+                <div class="table-actions">
+                  <button class="icon-button" type="button" (click)="startUserEdit(student)" [disabled]="!canManageResources()" [attr.aria-label]="'common.edit' | transloco">
+                    <lucide-icon name="Pencil" size="16" />
+                  </button>
+                  <button class="icon-button danger" type="button" (click)="deleteUser(student)" [disabled]="!canManageResources()" [attr.aria-label]="'students.delete' | transloco">
+                    <lucide-icon name="Trash2" size="16" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">
+                <div class="table-empty">
+                  <lucide-icon name="FileText" size="62" />
+                  <span>{{ 'students.empty' | transloco }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <footer class="table-footer">
+        <label class="page-size">
+          <span>{{ 'common.itemsPerPage' | transloco }}</span>
+          <select aria-label="items per page">
+            <option>10</option>
+          </select>
+        </label>
+
+        <div class="pagination">
+          <button class="icon-button ghost" type="button" [attr.aria-label]="'common.previous' | transloco">
+            <lucide-icon name="ChevronRight" size="16" class="previous-icon" />
+          </button>
+          <span>1</span>
+          <button class="icon-button ghost" type="button" [attr.aria-label]="'common.next' | transloco">
+            <lucide-icon name="ChevronRight" size="16" />
+          </button>
+        </div>
+      </footer>
+    </div>
+  </section>
+</section>

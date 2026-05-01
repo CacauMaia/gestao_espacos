@@ -1,0 +1,138 @@
+<div class="app-frame" data-test="dashboard-page">
+  <aside class="sidebar" [attr.aria-label]="'dashboard.sections.label' | transloco">
+    <div class="brand-button" aria-hidden="true">
+      <lucide-icon name="ShieldCheck" size="22" />
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (card of visibleSectionCards(); track card.id) {
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === card.id"
+          (click)="selectSection(card.id)"
+          [attr.aria-label]="card.titleKey | transloco"
+        >
+          <lucide-icon [name]="card.icon" size="19" />
+        </button>
+      }
+    </nav>
+
+    <div class="sidebar-bottom">
+      @if (currentUserInitials(); as initials) {
+        <span class="avatar">{{ initials }}</span>
+      }
+    </div>
+  </aside>
+
+  <main class="dashboard-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">{{ 'app.subtitle' | transloco }}</p>
+        <h1>{{ (activeSection() === 'overview' ? 'dashboard.title' : activeSectionCard().titleKey) | transloco }}</h1>
+        <p class="page-description">{{ activeSectionCard().descriptionKey | transloco }}</p>
+      </div>
+
+      <div class="user-area">
+        @if (currentUser(); as user) {
+          <app-status-pill tone="accent">{{ user.role }}</app-status-pill>
+          <span data-test="dashboard-current-user">{{ user.name }}</span>
+        }
+        <button class="icon-button ghost notification-button" type="button" (click)="refreshNotifications()" [attr.aria-label]="'dashboard.notifications' | transloco">
+          <lucide-icon name="Bell" size="18" />
+          @if (notificationCount() > 0) {
+            <span>{{ notificationCount() }}</span>
+          }
+        </button>
+        <button class="icon-button ghost" type="button" (click)="refreshActiveSection()" [attr.aria-label]="'dashboard.refresh' | transloco">
+          <lucide-icon name="RefreshCw" size="18" />
+        </button>
+        <button class="icon-button ghost" type="button" (click)="logout()" [attr.aria-label]="'dashboard.logout' | transloco">
+          <lucide-icon name="LogOut" size="18" />
+        </button>
+      </div>
+    </header>
+
+    @if (visibleFeedbackKey(); as key) {
+      <p class="notice success" role="status" data-test="dashboard-success-notice">{{ key | transloco }}</p>
+    }
+
+    @if (visibleErrorKey(); as key) {
+      <p class="notice error" role="alert" data-test="dashboard-error-notice">{{ key | transloco }}</p>
+    }
+
+    @if (visibleErrorMessage(); as message) {
+      <p class="notice error" role="alert" data-test="dashboard-error-message">{{ message }}</p>
+    }
+
+    @switch (activeSection()) {
+      @case ('overview') {
+        <app-dashboard-overview
+          [occupancyRate]="occupancyRate()"
+          [activeAttendanceCount]="activeAttendanceCount()"
+          [registeredUsersCount]="students().length"
+          [currentOccupancy]="currentOccupancy()"
+          [totalCapacity]="totalCapacity()"
+          [availableCapacity]="availableCapacity()"
+          [occupancyDonutBackground]="occupancyDonutBackground()"
+          [occupancyChartItems]="occupancyChartItems()"
+          [sectionCards]="visibleSectionCards()"
+          (sectionSelected)="selectSection($event)"
+        />
+      }
+
+      @case ('attendance') {
+        <app-dashboard-attendance
+          data-test="dashboard-attendance-section"
+          [checkInForm]="checkInForm"
+          [currentUser]="currentUser()"
+          [spaces]="spaces()"
+          [notifications]="notifications()"
+          [visibleActiveAttendances]="visibleActiveAttendances()"
+          [isMutating]="isMutating()"
+          [canManageAttendance]="canManageAttendance()"
+          [canSubmitCheckIn]="canSubmitCheckIn()"
+          [canViewActiveAttendances]="canViewActiveAttendances()"
+          (checkInSubmitted)="checkIn()"
+          (currentUserCheckOut)="checkOutCurrentUser()"
+          (attendanceCheckOut)="checkOut($event)"
+        />
+      }
+
+      @case ('students') {
+        <app-dashboard-users
+          [studentForm]="studentForm"
+          [editUserForm]="editUserForm"
+          [users]="filteredStudents()"
+          [searchQuery]="searchQuery()"
+          [studentRoleFilter]="studentRoleFilter()"
+          [isEditingUser]="isEditingUser()"
+          [canManageResources]="canManageResources()"
+          [canSubmitStudent]="canSubmitStudent()"
+          [canSubmitUserUpdate]="canSubmitUserUpdate()"
+          [studentNamePlaceholderKey]="studentNamePlaceholderKey()"
+          [studentEmailPlaceholderKey]="studentEmailPlaceholderKey()"
+          [studentPasswordPlaceholderKey]="studentPasswordPlaceholderKey()"
+          (createUserSubmitted)="createStudent()"
+          (updateUserSubmitted)="updateUser()"
+          (userEditStarted)="startUserEdit($event)"
+          (userEditCanceled)="cancelUserEdit()"
+          (userDeleted)="deleteStudent($event)"
+          (searchChanged)="updateSearchQuery($event)"
+          (roleFilterChanged)="updateStudentRoleFilter($event)"
+        />
+      }
+
+      @case ('spaces') {
+        <app-dashboard-spaces
+          [spaceForm]="spaceForm"
+          [spaces]="spaces()"
+          [canManageResources]="canManageResources()"
+          [canSubmitSpace]="canSubmitSpace()"
+          (createSpaceSubmitted)="createSpace()"
+          (spaceDeleted)="deleteSpace($event)"
+        />
+      }
+    }
+  </main>
+</div>

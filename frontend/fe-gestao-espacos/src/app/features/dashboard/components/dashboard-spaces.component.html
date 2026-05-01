@@ -1,0 +1,65 @@
+<section class="content-grid spaces-layout" data-test="spaces-section">
+  <section class="panel compact" aria-labelledby="new-space-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ 'spaces.new' | transloco }}</p>
+        <h2 id="new-space-title">{{ 'spaces.create' | transloco }}</h2>
+      </div>
+    </div>
+
+    <form [formGroup]="spaceForm()" (ngSubmit)="createSpace()" data-test="space-create-form">
+      <label>
+        <span>{{ 'spaces.name' | transloco }}</span>
+        <input formControlName="name" type="text" />
+        @if (spaceForm().controls.name.touched && spaceForm().controls.name.invalid) {
+          <small class="field-error">{{ 'validation.spaceName' | transloco }}</small>
+        }
+      </label>
+      <label>
+        <span>{{ 'spaces.type' | transloco }}</span>
+        <select formControlName="type">
+          <option value="classroom">{{ 'spaceTypes.classroom' | transloco }}</option>
+          <option value="laboratory">{{ 'spaceTypes.laboratory' | transloco }}</option>
+          <option value="study">{{ 'spaceTypes.study' | transloco }}</option>
+        </select>
+      </label>
+      <label>
+        <span>{{ 'spaces.capacity' | transloco }}</span>
+        <input formControlName="capacity" type="number" min="1" />
+        @if (spaceForm().controls.capacity.touched && spaceForm().controls.capacity.invalid) {
+          <small class="field-error">{{ 'validation.capacity' | transloco }}</small>
+        }
+      </label>
+      <button class="secondary-action" type="submit" [disabled]="!canSubmitSpace()">
+        <lucide-icon name="Plus" size="18" />
+        <span>{{ 'common.add' | transloco }}</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="panel wide" aria-labelledby="spaces-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ 'spaces.overview' | transloco }}</p>
+        <h2 id="spaces-title">{{ 'spaces.title' | transloco }}</h2>
+      </div>
+    </div>
+
+    <div class="student-list" data-test="spaces-list">
+      @for (space of spaces(); track space.id) {
+        <article class="student-row">
+          <div>
+            <strong>{{ space.name }}</strong>
+            <span>{{ ('spaceTypes.' + space.type) | transloco }} · {{ 'spaces.capacity' | transloco }} {{ space.capacity }}</span>
+          </div>
+          <app-status-pill tone="neutral">{{ space.type }}</app-status-pill>
+          <button class="icon-button danger" type="button" (click)="deleteSpace(space)" [disabled]="!canManageResources()" [attr.aria-label]="'spaces.delete' | transloco">
+            <lucide-icon name="Trash2" size="16" />
+          </button>
+        </article>
+      } @empty {
+        <p class="empty-state">{{ 'spaces.empty' | transloco }}</p>
+      }
+    </div>
+  </section>
+</section>
