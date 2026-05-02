@@ -14,9 +14,8 @@ ai                          Prompts e regras auxiliares
 
 ## Pré-requisitos
 
-- Node.js
-- npm
-- MySQL
+- Docker
+- Docker Compose
 
 O front foi configurado com `npm@10.9.4`.
 
@@ -30,59 +29,109 @@ database/schema.sql
 
 Ele apaga o banco `gestao_espacos` atual e cria tudo novamente do zero.
 
-### Opção 1: Usando MySQL diretamente
+## Docker (recomendado para clonagem e execução rápida)
 
-Execute a partir da raiz do projeto:
+### Antes de rodar
 
-```bash
-mysql -u root -p < database/schema.sql
-```
+Instale o Docker conforme seu sistema:
 
-Com a senha local usada no projeto:
+- **Linux:** instale Docker Engine e Docker Compose Plugin pelo gerenciador da sua distribuição ou pela documentação oficial do Docker.
+- **Windows:** instale Docker Desktop, habilite o backend WSL 2 quando solicitado e execute os comandos no PowerShell, Windows Terminal ou terminal da sua distro WSL.
+- **macOS:** instale Docker Desktop e aguarde o Docker Engine ficar ativo antes de rodar os comandos.
 
-```bash
-mysql -u root -pRoot@123 < database/schema.sql
-```
+Este projeto usa o comando moderno `docker compose`. Em instalações antigas, o comando pode ser `docker-compose`.
 
-### Opção 2: Usando script Node.js (recomendado)
-
-Entre na pasta do backend e execute:
+Crie o arquivo de variáveis de ambiente antes do primeiro start:
 
 ```bash
-cd backend/be-gestao-espacos
-npm run seed:schema
+cp .env.example .env
 ```
 
-O script usa variáveis de ambiente para a conexão MySQL:
+Depois, atualize `SEED_ADMIN_PASSWORD` no `.env` com uma senha segura de sua escolha.
 
-- `DB_HOST`
-- `DB_PORT`
-- `DB_USER`
-- `DB_PASSWORD`
-
-Se não estiverem definidas, o script usa os valores padrão definidos em `backend/be-gestao-espacos/scripts/seed-schema.ts`.
-
-Exemplo:
+A partir da raiz do repositório, execute:
 
 ```bash
-DB_HOST=localhost DB_PORT=3306 DB_USER=root DB_PASSWORD=Root@123 npm run seed:schema
+docker compose up --build
 ```
 
-> Importante: rode este comando dentro de `backend/be-gestao-espacos`, não dentro de `backend` ou `frontend`.
+Isso cria e levanta:
 
+- `db`: MySQL com `gestao_espacos` inicializado usando `database/schema.sql`
+- `backend`: API NestJS em `http://localhost:3000`
+- `frontend`: app Angular em `http://localhost:4200`
 
-### Opção 2: Usando script Node.js (recomendado)
+No fluxo com Docker, não é necessário rodar `npm install` nas pastas de backend ou frontend. As dependências são instaladas durante o build das imagens.
 
-Entre na pasta do backend e execute:
+O banco de dados não é exposto por padrão na porta do host para evitar conflitos com MySQL local. O backend se comunica com ele internamente via rede Docker.
+
+O Docker Compose carrega variáveis do `.env` na raiz do projeto para configurar banco e seed do admin. As principais são:
+
+```txt
+DB_PASSWORD=Root@123
+DB_DATABASE=gestao_espacos
+RUN_SEED_ADMIN=true
+SEED_ADMIN_EMAIL=admin@gestao.local
+SEED_ADMIN_PASSWORD=sua_senha_segura
+```
+
+No start do Docker, o backend aguarda o banco, executa a migração idempotente de presenças e depois roda `seed:admin` para criar o admin padrão se ele não existir.
+
+Para parar e remover os containers:
 
 ```bash
-cd backend/be-gestao-espacos
-npm run seed:schema
+docker compose down
 ```
 
-Isso executa o schema usando as configurações do ambiente (host, usuário, senha).
+Para parar e apagar também o volume do banco, recriando tudo do zero no próximo start:
 
-## Backend
+```bash
+docker compose down -v
+```
+
+### Observações por sistema operacional
+
+**Linux**
+
+Se aparecer erro de permissão ao acessar o Docker, como `permission denied while trying to connect to the Docker daemon socket`, rode o comando com `sudo`:
+
+```bash
+sudo docker compose up --build
+```
+
+Para evitar usar `sudo` sempre, adicione seu usuário ao grupo `docker`:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Depois saia da sessão e entre novamente, ou reinicie o terminal. Essa configuração dá ao usuário permissão ampla sobre o Docker da máquina, então use apenas em ambiente em que isso faça sentido.
+
+**Windows**
+
+Use Docker Desktop com WSL 2 habilitado. Se estiver usando WSL, mantenha o projeto dentro do filesystem Linux da distro, por exemplo `~/projetos/gestao_espacos`, para evitar lentidão com volumes montados a partir de `C:\`.
+
+Os comandos são os mesmos:
+
+```powershell
+docker compose up --build
+docker compose down
+```
+
+**macOS**
+
+Abra o Docker Desktop e espere o ícone indicar que o Docker está rodando. Depois execute os comandos normalmente no Terminal:
+
+```bash
+docker compose up --build
+docker compose down
+```
+
+## Execução local sem Docker
+
+Use esta opção apenas se quiser rodar backend e frontend diretamente na sua máquina, sem containers. Nesse fluxo, é necessário ter Node.js, npm e MySQL instalados localmente.
+
+### Backend
 
 Entre na pasta:
 
@@ -131,7 +180,7 @@ DB_PASSWORD=Root@123
 DB_DATABASE=gestao_espacos
 ```
 
-## Frontend
+### Frontend
 
 Em outro terminal, entre na pasta:
 
@@ -161,7 +210,16 @@ Durante o desenvolvimento, o front chama `/api` e o `proxy.conf.json` redirecion
 
 ## Fluxo Rápido
 
-1. Execute `database/schema.sql`.
+Com Docker:
+
+1. Crie o `.env` a partir do `.env.example`.
+2. Ajuste `SEED_ADMIN_PASSWORD`.
+3. Rode `docker compose up --build`.
+4. Acesse `http://localhost:4200`.
+
+Sem Docker:
+
+1. Execute `database/schema.sql` no MySQL local.
 2. Rode `npm install` no backend.
 3. Rode `npm run seed:admin` no backend.
 4. Rode `npm run start:dev` no backend.
@@ -182,12 +240,17 @@ O backend usa:
 
 - `ADMIN` gerencia usuários e espaços.
 - `MONITOR` e `STUDENT` registram check-in/check-out.
+- Usuários não-admin podem ser ativados ou desativados por `ADMIN`; usuário desativado não faz login nem check-in.
+- Se um usuário desativado ainda tiver presença ativa, ela é encerrada automaticamente quando o prazo esperado de saída vence.
 - Um usuário só pode ter uma presença ativa.
 - Um espaço só aceita entrada se `currentOccupancy < capacity`.
 - `classroom` aceita entrada apenas em `07:30-11:30`, `13:00-17:00` e `19:00-22:30`.
 - `study` permite até 3 horas de uso.
 - `laboratory` permite até 1 hora de uso.
 - Após o prazo, o backend retorna notificação para o usuário deixar o ambiente.
+- Presenças vencidas há mais de 6 horas são encerradas automaticamente.
+- Alunos e monitores veem o próprio histórico, incluindo saídas manuais, automáticas e encerradas por monitor/admin.
+- Admins e monitores precisam confirmar em modal própria antes de encerrar presença de terceiros.
 
 ## Validação
 

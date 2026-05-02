@@ -1,0 +1,48 @@
+<div class="dialog-backdrop" role="presentation">
+  <section
+    class="force-checkout-dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'force-checkout-title'"
+  >
+    <header class="dialog-header">
+      <span class="dialog-icon" aria-hidden="true">
+        <lucide-icon name="LogOut" size="20" />
+      </span>
+      <div>
+        <p class="eyebrow">{{ 'attendance.forceCheckOut' | transloco }}</p>
+        <h2 id="force-checkout-title">{{ 'attendance.forceCheckOutConfirmTitle' | transloco }}</h2>
+      </div>
+    </header>
+
+    <div class="dialog-summary">
+      <div>
+        <span>{{ 'students.name' | transloco }}</span>
+        <strong>{{ attendance().user?.name ?? attendance().userId }}</strong>
+      </div>
+      <div>
+        <span>{{ 'spaces.name' | transloco }}</span>
+        <strong>{{ attendance().space?.name ?? attendance().spaceId }}</strong>
+      </div>
+      <div>
+        <span>{{ 'attendance.entryAt' | transloco }}</span>
+        <strong>{{ attendance().entryAt | date: 'short' }}</strong>
+      </div>
+    </div>
+
+    <label class="dialog-field">
+      <span>{{ 'attendance.forceCheckOutNoteLabel' | transloco }}</span>
+      <textarea #note rows="3" [placeholder]="'attendance.forceCheckOutNotePlaceholder' | transloco"></textarea>
+    </label>
+
+    <footer class="dialog-actions">
+      <button class="secondary-action" type="button" (click)="cancel()" [disabled]="isMutating()">
+        {{ 'common.cancel' | transloco }}
+      </button>
+      <button class="primary-action danger" type="button" (click)="confirm(note.value)" [disabled]="isMutating()">
+        <lucide-icon name="LogOut" size="18" />
+        <span>{{ 'attendance.forceCheckOutConfirm' | transloco }}</span>
+      </button>
+    </footer>
+  </section>
+</div>

@@ -8,6 +8,12 @@ import {
 import { User } from './user.entity';
 import { Space } from './space.entity';
 
+export enum CheckoutReason {
+  Manual = 'manual',
+  AutoExpired = 'auto_expired',
+  Forced = 'forced',
+}
+
 @Entity('attendances')
 export class Attendance {
   @PrimaryGeneratedColumn('uuid')
@@ -31,6 +37,30 @@ export class Attendance {
   @Column({ name: 'overstay_notified_at', type: 'timestamp', nullable: true })
   overstayNotifiedAt: Date | null;
 
+  @Column({
+    name: 'checkout_reason',
+    type: 'enum',
+    enum: CheckoutReason,
+    nullable: true,
+  })
+  checkoutReason: CheckoutReason | null;
+
+  @Column({
+    name: 'closed_by_user_id',
+    type: 'char',
+    length: 36,
+    nullable: true,
+  })
+  closedByUserId: string | null;
+
+  @Column({
+    name: 'checkout_note',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  checkoutNote: string | null;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
@@ -38,4 +68,8 @@ export class Attendance {
   @ManyToOne(() => Space, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'space_id' })
   space: Space;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'closed_by_user_id' })
+  closedByUser: User | null;
 }

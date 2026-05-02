@@ -2,18 +2,19 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
-import { StatusPillComponent } from '../../../shared/ui/status-pill.component';
-import { User } from '../dashboard.interfaces';
-import { createEditUserForm, createStudentForm } from '../helpers/dashboard-forms.helper';
-import { StudentRoleFilter } from '../helpers/dashboard-student-filter.helper';
+import { StatusPillComponent } from '../../../../shared/ui/status-pill.component';
+import { User } from '../../dashboard.interfaces';
+import { createEditUserForm, createStudentForm } from '../../helpers/dashboard-forms.helper';
+import { StudentRoleFilter } from '../../helpers/dashboard-student-filter.helper';
 
 @Component({
-  selector: 'app-dashboard-users',
+  selector: 'app-users',
   imports: [ReactiveFormsModule, TranslocoPipe, LucideAngularModule, StatusPillComponent],
-  templateUrl: './dashboard-users.component.html',
+  templateUrl: './users.component.html',
+  styleUrl: './users.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardUsersComponent {
+export class UsersComponent {
   public readonly studentForm = input.required<ReturnType<typeof createStudentForm>>();
   public readonly editUserForm = input.required<ReturnType<typeof createEditUserForm>>();
   public readonly users = input.required<readonly User[]>();
@@ -26,14 +27,16 @@ export class DashboardUsersComponent {
   public readonly studentNamePlaceholderKey = input.required<string>();
   public readonly studentEmailPlaceholderKey = input.required<string>();
   public readonly studentPasswordPlaceholderKey = input.required<string>();
+  public readonly hasMoreUsers = input.required<boolean>();
 
   public readonly createUserSubmitted = output<void>();
   public readonly updateUserSubmitted = output<void>();
   public readonly userEditStarted = output<User>();
   public readonly userEditCanceled = output<void>();
-  public readonly userDeleted = output<User>();
+  public readonly userStatusChanged = output<User>();
   public readonly searchChanged = output<string>();
   public readonly roleFilterChanged = output<string>();
+  public readonly usersRequested = output<void>();
 
   protected createUser(): void {
     this.createUserSubmitted.emit();
@@ -51,8 +54,8 @@ export class DashboardUsersComponent {
     this.userEditCanceled.emit();
   }
 
-  protected deleteUser(user: User): void {
-    this.userDeleted.emit(user);
+  protected toggleUserStatus(user: User): void {
+    this.userStatusChanged.emit(user);
   }
 
   protected updateSearchQuery(query: string): void {
@@ -61,5 +64,9 @@ export class DashboardUsersComponent {
 
   protected updateStudentRoleFilter(role: string): void {
     this.roleFilterChanged.emit(role);
+  }
+
+  protected loadMoreUsers(): void {
+    this.usersRequested.emit();
   }
 }

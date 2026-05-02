@@ -12,8 +12,7 @@ export type TokenPayload = {
 
 @Injectable()
 export class TokenService {
-  private readonly secret =
-    process.env.AUTH_TOKEN_SECRET ?? 'gestao-espacos-dev-secret';
+  private readonly secret = this.resolveSecret();
   private readonly expiresInSeconds = Number(
     process.env.AUTH_TOKEN_EXPIRES_IN_SECONDS ?? 60 * 60,
   );
@@ -49,9 +48,15 @@ export class TokenService {
       throw new UnauthorizedException('Token inválido.');
     }
 
-    const payload = JSON.parse(
-      Buffer.from(body, 'base64url').toString('utf8'),
-    ) as TokenPayload;
+    let payload: TokenPayload;
+
+    try {
+      payload = JSON.parse(
+        Buffer.from(body, 'base64url').toString('utf8'),
+      ) as TokenPayload;
+    } catch {
+      throw new UnauthorizedException('Token inválido.');
+    }
 
     if (payload.exp < Math.floor(Date.now() / 1000)) {
       throw new UnauthorizedException('Token expirado.');
@@ -89,5 +94,19 @@ export class TokenService {
     }
 
     return timingSafeEqual(valueBuffer, expectedValueBuffer);
+  }
+
+  private resolveSecret(): string {
+    const secret = process.env.AUTH_TOKEN_SECRET;
+
+    if (secret) {
+      return secret;
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('AUTH_TOKEN_SECRET deve ser definido em produção.');
+    }
+
+    return 'gestao-espacos-dev-secret';
   }
 }

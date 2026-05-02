@@ -28,6 +28,9 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.Student })
   role: UserRole;
 
+  @Column({ type: 'boolean', default: true })
+  active: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 

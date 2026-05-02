@@ -144,7 +144,7 @@ Disponível para administradores. Permite:
 - pesquisar;
 - criar usuários;
 - editar usuários;
-- remover usuários.
+- ativar e desativar usuários não-admin.
 
 ### Ambientes
 

@@ -1,0 +1,286 @@
+<section class="content-grid attendance-layout" data-test="attendance-section">
+  <section class="panel compact attendance-entry-panel" aria-labelledby="check-in-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ 'attendance.controls' | transloco }}</p>
+        <h2 id="check-in-title">{{ (currentAttendance() ? 'attendance.currentSummary' : 'attendance.findSpace') | transloco }}</h2>
+      </div>
+    </div>
+
+    <form class="attendance-form" [formGroup]="checkInForm()" (ngSubmit)="submitCheckIn()" data-test="attendance-form">
+      @if (currentUser(); as user) {
+        <div class="readonly-field">
+          <span>{{ 'attendance.currentUser' | transloco }}</span>
+          <strong data-test="attendance-current-user">{{ user.name }}</strong>
+        </div>
+      }
+
+      <input formControlName="spaceId" type="hidden" />
+
+      @if (currentAttendance()) {
+        <div class="readonly-field">
+          <span>{{ 'attendance.currentSpace' | transloco }}</span>
+          <strong>{{ currentAttendance()?.space?.name ?? currentAttendanceSpace()?.name ?? currentAttendance()?.spaceId }}</strong>
+        </div>
+      } @else {
+        <div class="attendance-filters">
+          <label class="search-field">
+            <lucide-icon name="Search" size="16" />
+            <input #spaceSearch type="search" [value]="spaceSearchQuery()" [placeholder]="'attendance.searchSpace' | transloco" (input)="updateSpaceSearchQuery(spaceSearch.value)" data-test="attendance-space-search" />
+          </label>
+
+          <label class="role-filter">
+            <span>{{ 'spaces.type' | transloco }}</span>
+            <select #spaceType [value]="spaceTypeFilter()" (change)="updateSpaceTypeFilter(spaceType.value)" data-test="attendance-space-type-filter">
+              <option value="ALL">{{ 'attendance.allSpaceTypes' | transloco }}</option>
+              @for (type of spaceTypes; track type) {
+                <option [value]="type">{{ ('spaceTypes.' + type) | transloco }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      }
+    </form>
+  </section>
+
+  <section class="panel wide" aria-labelledby="active-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ boardEyebrowKey() | transloco }}</p>
+        <h2 id="active-title">{{ boardTitleKey() | transloco }}</h2>
+      </div>
+    </div>
+
+    @if (notifications().length) {
+      <div class="notification-list" role="status">
+        @for (notification of notifications(); track notification.attendanceId) {
+          <article [class.warning]="notification.type === 'leaving_soon'">
+            <strong>{{ notification.spaceName }}</strong>
+            <span>{{ notification.message }}</span>
+          </article>
+        }
+      </div>
+    }
+
+    @if (currentAttendance(); as attendance) {
+      <article class="current-attendance-card wide-attendance-card" data-test="attendance-current-card">
+        <div class="space-card-heading">
+          <span class="metric-icon"><lucide-icon name="DoorOpen" size="20" /></span>
+          <div>
+            <p>{{ 'attendance.currentSpace' | transloco }}</p>
+            <h3>{{ attendance.space?.name ?? currentAttendanceSpace()?.name ?? attendance.spaceId }}</h3>
+          </div>
+        </div>
+
+        <dl class="space-facts">
+          <div>
+            <dt>{{ 'spaces.type' | transloco }}</dt>
+            <dd>{{ ('spaceTypes.' + (attendance.space?.type ?? currentAttendanceSpace()?.type)) | transloco }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'attendance.entryAt' | transloco }}</dt>
+            <dd>{{ attendance.entryAt | date: 'short' }}</dd>
+          </div>
+          @if (attendance.expectedExitAt) {
+            <div>
+              <dt>{{ 'attendance.expectedExitAt' | transloco }}</dt>
+              <dd>{{ attendance.expectedExitAt | date: 'short' }}</dd>
+            </div>
+          }
+        </dl>
+
+        <button class="secondary-action" type="button" (click)="checkOutCurrentUser()" [disabled]="isMutating() || !canManageAttendance()" data-test="attendance-check-out-button">
+          <lucide-icon name="LogOut" size="18" />
+          <span>{{ 'attendance.registerExit' | transloco }}</span>
+        </button>
+      </article>
+    } @else {
+      <div class="space-card-grid" data-test="attendance-space-cards">
+        @for (space of displayedSpaces(); track space.id) {
+          @let spaceOccupancy = occupancyFor(space);
+          <article class="space-option-card" [class.unavailable]="!canCheckInSpace(space)">
+            <div class="space-card-heading">
+              <span class="metric-icon"><lucide-icon name="DoorOpen" size="20" /></span>
+              <div>
+                <p>{{ ('spaceTypes.' + space.type) | transloco }}</p>
+                <h3>{{ space.name }}</h3>
+              </div>
+            </div>
+
+            <dl class="space-facts">
+              <div>
+                <dt>{{ 'spaces.capacity' | transloco }}</dt>
+                <dd>{{ spaceOccupancy.currentOccupancy }}/{{ spaceOccupancy.capacity }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'spaces.available' | transloco }}</dt>
+                <dd>{{ spaceOccupancy.availableSlots }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'attendance.status' | transloco }}</dt>
+                <dd>{{ spaceStatusKey(space) | transloco }}</dd>
+              </div>
+            </dl>
+
+            <button class="primary-action" type="button" (click)="checkInSpace(space)" [disabled]="!canCheckInSpace(space)" data-test="attendance-check-in-button">
+              <lucide-icon name="UserCheck" size="18" />
+              <span>{{ 'attendance.registerEntry' | transloco }}</span>
+            </button>
+          </article>
+        } @empty {
+          <div class="table-empty space-card-empty">
+            <lucide-icon name="FileText" size="62" />
+            <span>{{ 'attendance.noSpacesFound' | transloco }}</span>
+          </div>
+        }
+      </div>
+
+      @if (hasMoreSpaces()) {
+        <div class="load-more-row">
+          <button class="secondary-action" type="button" (click)="loadMoreSpaces()">
+            <lucide-icon name="Plus" size="18" />
+            <span>{{ 'attendance.loadMoreSpaces' | transloco }}</span>
+          </button>
+        </div>
+      }
+    }
+
+    @if (canViewActiveAttendances()) {
+      <div class="active-attendance-heading">
+        <p class="eyebrow">{{ 'attendance.live' | transloco }}</p>
+        <h3>{{ 'attendance.active' | transloco }}</h3>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 'students.name' | transloco }}</th>
+              <th>{{ 'spaces.name' | transloco }}</th>
+              <th>{{ 'attendance.entryAt' | transloco }}</th>
+              <th>{{ 'common.actions' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (attendance of visibleActiveAttendances(); track attendance.id) {
+              <tr>
+                <td>{{ attendance.user?.name ?? attendance.userId }}</td>
+                <td>{{ attendance.space?.name ?? attendance.spaceId }}</td>
+                <td>{{ attendance.entryAt | date: 'short' }}</td>
+                <td>
+                  <div class="table-actions">
+                    @if (canCheckOutAttendance(attendance)) {
+                      <button class="table-action" type="button" (click)="checkOut(attendance)" [disabled]="isMutating()">
+                        <lucide-icon name="LogOut" size="16" />
+                        <span>{{ 'attendance.checkOut' | transloco }}</span>
+                      </button>
+                    }
+                    @if (canForceCheckOutAttendance(attendance)) {
+                      <button class="table-action danger" type="button" (click)="forceCheckOut(attendance)" [disabled]="isMutating()">
+                        <lucide-icon name="LogOut" size="16" />
+                        <span>{{ 'attendance.forceCheckOut' | transloco }}</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4">
+                  <div class="table-empty">
+                    <lucide-icon name="Users" size="68" />
+                    <span>{{ 'attendance.empty' | transloco }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (hasMoreActiveAttendances()) {
+        <div class="load-more-row">
+          <button class="secondary-action" type="button" (click)="loadMoreActiveAttendances()">
+            <lucide-icon name="Plus" size="18" />
+            <span>{{ 'common.loadMore' | transloco }}</span>
+          </button>
+        </div>
+      }
+    }
+
+    <div class="active-attendance-heading">
+      <p class="eyebrow">{{ 'attendance.historyEyebrow' | transloco }}</p>
+      <h3>{{ 'attendance.history' | transloco }}</h3>
+    </div>
+
+    <div class="attendance-filters history-filters">
+      <label class="search-field">
+        <lucide-icon name="Search" size="16" />
+        <input #historySearch type="search" [value]="historySearchQuery()" [placeholder]="'attendance.searchHistory' | transloco" (input)="updateHistorySearchQuery(historySearch.value)" />
+      </label>
+
+      <label class="role-filter">
+        <span>{{ 'attendance.checkoutReasonFilter' | transloco }}</span>
+        <select #historyReason [value]="historyReasonFilter()" (change)="updateHistoryReasonFilter(historyReason.value)">
+          <option value="ALL">{{ 'attendance.allCheckoutReasons' | transloco }}</option>
+          @for (reason of checkoutReasons; track reason) {
+            <option [value]="reason">{{ ('attendance.checkoutReasons.' + reason) | transloco }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ 'students.name' | transloco }}</th>
+            <th>{{ 'spaces.name' | transloco }}</th>
+            <th>{{ 'attendance.entryAt' | transloco }}</th>
+            <th>{{ 'attendance.exitAt' | transloco }}</th>
+            <th>{{ 'attendance.duration' | transloco }}</th>
+            <th>{{ 'attendance.checkoutReason' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (attendance of filteredAttendanceHistory(); track attendance.id) {
+            <tr>
+              <td>{{ attendance.user?.name ?? attendance.userId }}</td>
+              <td>{{ attendance.space?.name ?? attendance.spaceId }}</td>
+              <td>{{ attendance.entryAt | date: 'short' }}</td>
+              <td>
+                @if (attendance.exitAt) {
+                  {{ attendance.exitAt | date: 'short' }}
+                } @else {
+                  -
+                }
+              </td>
+              <td>{{ attendanceDurationMinutes(attendance) }} {{ 'attendance.minutesShort' | transloco }}</td>
+              <td>
+                <span class="reason-pill">{{ checkoutReasonKey(attendance) | transloco }}</span>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="table-empty">
+                  <lucide-icon name="FileText" size="68" />
+                  <span>{{ 'attendance.historyEmpty' | transloco }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (hasMoreAttendanceHistory()) {
+      <div class="load-more-row">
+        <button class="secondary-action" type="button" (click)="loadMoreAttendanceHistory()">
+          <lucide-icon name="Plus" size="18" />
+          <span>{{ 'common.loadMore' | transloco }}</span>
+        </button>
+      </div>
+    }
+  </section>
+</section>

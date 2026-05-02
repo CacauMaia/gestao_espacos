@@ -10,6 +10,7 @@ describe('UsersService', () => {
   let usersRepository: {
     findOne: jest.Mock;
     find: jest.Mock;
+    findAndCount: jest.Mock;
     create: jest.Mock;
     merge: jest.Mock;
     save: jest.Mock;
@@ -25,6 +26,7 @@ describe('UsersService', () => {
     email: 'ana.souza@example.com',
     password: 'password-teste',
     role: UserRole.Student,
+    active: true,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
   };
 
@@ -32,6 +34,7 @@ describe('UsersService', () => {
     usersRepository = {
       findOne: jest.fn(),
       find: jest.fn(),
+      findAndCount: jest.fn(),
       create: jest.fn(),
       merge: jest.fn(),
       save: jest.fn(),
@@ -104,18 +107,162 @@ describe('UsersService', () => {
     );
   });
 
+  it('deve bloquear autodeleção de admin', async () => {
+    const adminUser: User = {
+      ...user,
+      id: 'admin-id',
+      role: UserRole.Admin,
+    };
+
+    usersRepository.findOne.mockResolvedValue(adminUser);
+
+    await expect(
+      service.remove('admin-id', {
+        sub: 'admin-id',
+        email: 'admin@example.com',
+        role: UserRole.Admin,
+        iat: 0,
+        exp: 0,
+      }),
+    ).rejects.toThrow('Administrador não pode se autodeletar.');
+
+    expect(usersRepository.remove).not.toHaveBeenCalled();
+  });
+
+  it('deve bloquear exclusão de outro admin', async () => {
+    const adminUser: User = {
+      ...user,
+      id: 'admin-id',
+      role: UserRole.Admin,
+      active: true,
+    };
+
+    usersRepository.findOne.mockResolvedValue(adminUser);
+
+    await expect(
+      service.remove('admin-id', {
+        sub: 'other-admin-id',
+        email: 'other-admin@example.com',
+        role: UserRole.Admin,
+        iat: 0,
+        exp: 0,
+      }),
+    ).rejects.toThrow('Administrador não pode deletar outro administrador.');
+
+    expect(usersRepository.remove).not.toHaveBeenCalled();
+  });
+
+  it('deve desativar user não-admin quando admin autenticado', async () => {
+    usersRepository.findOne.mockResolvedValue(user);
+
+    await service.remove('user-id', {
+      sub: 'admin-id',
+      email: 'admin@example.com',
+      role: UserRole.Admin,
+      iat: 0,
+      exp: 0,
+    });
+
+    expect(usersRepository.save).toHaveBeenCalledWith({
+      ...user,
+      active: false,
+    });
+    expect(usersRepository.remove).not.toHaveBeenCalled();
+  });
+
+  it('deve ativar ou desativar user não-admin pelo update', async () => {
+    const inactiveUser: User = {
+      ...user,
+      active: false,
+    };
+
+    usersRepository.findOne.mockResolvedValue(inactiveUser);
+    usersRepository.merge.mockReturnValue({ ...inactiveUser, active: true });
+    usersRepository.save.mockResolvedValue({ ...inactiveUser, active: true });
+
+    const result = await service.update('user-id', { active: true });
+
+    expect(usersRepository.merge).toHaveBeenCalledWith(inactiveUser, {
+      active: true,
+    });
+    expect(usersRepository.save).toHaveBeenCalledWith({
+      ...inactiveUser,
+      active: true,
+    });
+    expect(result.active).toBe(true);
+  });
+
+  it('deve bloquear ativação/desativação de admin pelo update', async () => {
+    const adminUser: User = {
+      ...user,
+      id: 'admin-id',
+      role: UserRole.Admin,
+      active: true,
+    };
+
+    usersRepository.findOne.mockResolvedValue(adminUser);
+
+    await expect(service.update('admin-id', { active: false })).rejects.toThrow(
+      'Administrador não pode ser ativado ou desativado.',
+    );
+    expect(usersRepository.save).not.toHaveBeenCalled();
+  });
+
   it('deve filtrar users por role e nome', async () => {
     usersRepository.find.mockResolvedValue([user]);
 
-    const result = await service.list(UserRole.Student, ' Ana ');
+    const result = await service.list({
+      role: UserRole.Student,
+      search: ' Ana ',
+    });
 
     expect(usersRepository.find).toHaveBeenCalledWith({
-      where: {
-        role: UserRole.Student,
-        name: Like('%Ana%'),
-      },
+      where: [
+        { role: UserRole.Student, name: Like('%Ana%') },
+        { role: UserRole.Student, email: Like('%Ana%') },
+      ],
       order: { name: 'ASC' },
     });
     expect(result).toEqual([user]);
+  });
+
+  it('deve paginar users com filtros de role, active e busca', async () => {
+    usersRepository.findAndCount.mockResolvedValue([[user], 12]);
+
+    const result = await service.list({
+      role: UserRole.Student,
+      search: 'ana',
+      active: 'true',
+      page: '2',
+      limit: '5',
+    });
+
+    expect(usersRepository.findAndCount).toHaveBeenCalledWith({
+      where: [
+        { role: UserRole.Student, active: true, name: Like('%ana%') },
+        { role: UserRole.Student, active: true, email: Like('%ana%') },
+      ],
+      order: { name: 'ASC' },
+      skip: 5,
+      take: 5,
+    });
+    expect(result).toEqual({
+      items: [user],
+      meta: {
+        page: 2,
+        limit: 5,
+        totalItems: 12,
+        totalPages: 3,
+        hasNextPage: true,
+        hasPreviousPage: true,
+      },
+    });
+  });
+
+  it('deve validar filtro active', async () => {
+    await expect(service.list({ active: 'talvez' })).rejects.toThrow(
+      'active deve ser true ou false.',
+    );
+    expect(usersRepository.find).not.toHaveBeenCalled();
   });
 });

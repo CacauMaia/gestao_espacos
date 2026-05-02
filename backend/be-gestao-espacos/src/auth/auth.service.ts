@@ -26,6 +26,7 @@ export class AuthService {
 
     if (
       !user ||
+      !user.active ||
       !this.passwordService.compare(loginDto.password, user.password)
     ) {
       throw new UnauthorizedException('Credenciais inválidas.');
@@ -38,6 +39,10 @@ export class AuthService {
     const refreshToken = await this.buscarRefreshTokenValido(
       refreshTokenDto.refreshToken,
     );
+
+    if (!refreshToken.user.active) {
+      throw new UnauthorizedException('Credenciais inválidas.');
+    }
 
     const authenticatedResponse = await this.criarRespostaAutenticada(
       refreshToken.user,

@@ -2,16 +2,17 @@ import { PercentPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
-import { OccupancyChartItem } from '../helpers/dashboard-charts.helper';
-import { DashboardSection, SectionCard } from '../helpers/dashboard-sections.helper';
+import { OccupancyChartItem } from '../../helpers/dashboard-charts.helper';
+import { DashboardSection, SectionCard } from '../../helpers/dashboard-sections.helper';
 
 @Component({
-  selector: 'app-dashboard-overview',
+  selector: 'app-overview',
   imports: [PercentPipe, TranslocoPipe, LucideAngularModule],
-  templateUrl: './dashboard-overview.component.html',
+  templateUrl: './overview.component.html',
+  styleUrl: './overview.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardOverviewComponent {
+export class OverviewComponent {
   public readonly occupancyRate = input.required<number>();
   public readonly activeAttendanceCount = input.required<number>();
   public readonly registeredUsersCount = input.required<number>();

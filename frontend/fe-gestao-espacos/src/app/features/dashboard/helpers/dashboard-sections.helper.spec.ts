@@ -13,6 +13,7 @@ describe('dashboard section helpers', () => {
   it('keeps management sections admin-only', () => {
     expect(defaultDashboardSection('ADMIN')).toBe('overview');
     expect(canAccessDashboardSection('overview', 'ADMIN')).toBe(true);
+    expect(canAccessDashboardSection('attendance', 'ADMIN')).toBe(true);
     expect(canAccessDashboardSection('students', 'ADMIN')).toBe(true);
     expect(canAccessDashboardSection('spaces', 'ADMIN')).toBe(true);
     expect(canAccessDashboardSection('students', 'MONITOR')).toBe(false);

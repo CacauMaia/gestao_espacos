@@ -10,10 +10,13 @@ interface SectionState {
   studentForm: ReturnType<typeof createStudentForm>;
   editUserForm: ReturnType<typeof createEditUserForm>;
   spaceForm: ReturnType<typeof createSpaceForm>;
+  editSpaceForm: ReturnType<typeof createSpaceForm>;
   checkInForm: ReturnType<typeof createCheckInForm>;
   students: WritableSignal<User[]>;
   spaces: WritableSignal<Space[]>;
   activeAttendances: WritableSignal<Attendance[]>;
+  attendanceHistory: WritableSignal<Attendance[]>;
+  currentAttendance: WritableSignal<Attendance | null>;
   occupancy: WritableSignal<Occupancy[]>;
 }
 
@@ -29,6 +32,7 @@ export function resetDashboardSectionState(section: DashboardSection, state: Sec
 
   if (section === 'spaces') {
     state.spaceForm.reset({ name: '', type: 'classroom', capacity: 24 });
+    state.editSpaceForm.reset({ name: '', type: 'classroom', capacity: 24 });
     state.spaces.set([]);
     state.occupancy.set([]);
     return;
@@ -37,6 +41,8 @@ export function resetDashboardSectionState(section: DashboardSection, state: Sec
   if (section === 'attendance') {
     state.checkInForm.reset({ spaceId: '' });
     state.activeAttendances.set([]);
+    state.attendanceHistory.set([]);
+    state.currentAttendance.set(null);
     state.spaces.set([]);
     state.occupancy.set([]);
     return;
@@ -45,5 +51,7 @@ export function resetDashboardSectionState(section: DashboardSection, state: Sec
   state.students.set([]);
   state.spaces.set([]);
   state.activeAttendances.set([]);
+  state.attendanceHistory.set([]);
+  state.currentAttendance.set(null);
   state.occupancy.set([]);
 }

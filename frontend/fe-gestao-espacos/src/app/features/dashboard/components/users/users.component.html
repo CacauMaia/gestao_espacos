@@ -123,15 +123,22 @@
             <tr>
               <td>{{ student.name }}</td>
               <td>{{ student.email }}</td>
-              <td><app-status-pill tone="neutral">{{ student.role }}</app-status-pill></td>
+              <td>
+                <app-status-pill tone="neutral">{{ student.role }}</app-status-pill>
+                <small class="status-label">
+                  {{ student.active ? 'Ativo' : 'Desativado' }}
+                </small>
+              </td>
               <td>
                 <div class="table-actions">
                   <button class="icon-button" type="button" (click)="startUserEdit(student)" [disabled]="!canManageResources()" [attr.aria-label]="'common.edit' | transloco">
                     <lucide-icon name="Pencil" size="16" />
                   </button>
-                  <button class="icon-button danger" type="button" (click)="deleteUser(student)" [disabled]="!canManageResources()" [attr.aria-label]="'students.delete' | transloco">
-                    <lucide-icon name="Trash2" size="16" />
-                  </button>
+                  @if (student.role !== 'ADMIN') {
+                    <button class="icon-button" [class.danger]="student.active" type="button" (click)="toggleUserStatus(student)" [disabled]="!canManageResources()" [attr.aria-label]="student.active ? 'Desativar usuário' : 'Reativar usuário'">
+                      <lucide-icon [name]="student.active ? 'Power' : 'RotateCcw'" size="16" />
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -148,24 +155,14 @@
         </tbody>
       </table>
 
-      <footer class="table-footer">
-        <label class="page-size">
-          <span>{{ 'common.itemsPerPage' | transloco }}</span>
-          <select aria-label="items per page">
-            <option>10</option>
-          </select>
-        </label>
-
-        <div class="pagination">
-          <button class="icon-button ghost" type="button" [attr.aria-label]="'common.previous' | transloco">
-            <lucide-icon name="ChevronRight" size="16" class="previous-icon" />
+      @if (hasMoreUsers()) {
+        <footer class="table-footer">
+          <button class="secondary-action" type="button" (click)="loadMoreUsers()">
+            <lucide-icon name="Plus" size="18" />
+            <span>{{ 'common.loadMore' | transloco }}</span>
           </button>
-          <span>1</span>
-          <button class="icon-button ghost" type="button" [attr.aria-label]="'common.next' | transloco">
-            <lucide-icon name="ChevronRight" size="16" />
-          </button>
-        </div>
-      </footer>
+        </footer>
+      }
     </div>
   </section>
 </section>

@@ -53,21 +53,36 @@
       </div>
     </header>
 
-    @if (visibleFeedbackKey(); as key) {
-      <p class="notice success" role="status" data-test="dashboard-success-notice">{{ key | transloco }}</p>
-    }
-
-    @if (visibleErrorKey(); as key) {
-      <p class="notice error" role="alert" data-test="dashboard-error-notice">{{ key | transloco }}</p>
-    }
-
-    @if (visibleErrorMessage(); as message) {
-      <p class="notice error" role="alert" data-test="dashboard-error-message">{{ message }}</p>
+    @if (visibleToast(); as toast) {
+      <div class="toast-region" aria-live="polite" aria-atomic="true">
+        <section
+          class="toast"
+          [class.success]="toast.tone === 'success'"
+          [class.error]="toast.tone === 'error'"
+          [attr.role]="toast.tone === 'error' ? 'alert' : 'status'"
+          [attr.data-test]="toast.tone === 'success' ? 'dashboard-success-notice' : toast.translate ? 'dashboard-error-notice' : 'dashboard-error-message'"
+        >
+          <span class="toast-icon" aria-hidden="true">
+            <lucide-icon [name]="toast.tone === 'success' ? 'CheckCircle2' : 'CircleAlert'" size="20" />
+          </span>
+          <span class="toast-message">
+            @if (toast.translate) {
+              {{ toast.message | transloco }}
+            } @else {
+              {{ toast.message }}
+            }
+          </span>
+          <button class="toast-close" type="button" (click)="dismissToast()" [attr.aria-label]="'common.close' | transloco">
+            <lucide-icon name="X" size="17" />
+          </button>
+          <span class="toast-timer" aria-hidden="true"></span>
+        </section>
+      </div>
     }
 
     @switch (activeSection()) {
       @case ('overview') {
-        <app-dashboard-overview
+        <app-overview
           [occupancyRate]="occupancyRate()"
           [activeAttendanceCount]="activeAttendanceCount()"
           [registeredUsersCount]="students().length"
@@ -82,25 +97,34 @@
       }
 
       @case ('attendance') {
-        <app-dashboard-attendance
+        <app-attendance
           data-test="dashboard-attendance-section"
           [checkInForm]="checkInForm"
           [currentUser]="currentUser()"
           [spaces]="spaces()"
+          [occupancy]="occupancy()"
           [notifications]="notifications()"
+          [currentAttendance]="currentAttendance()"
           [visibleActiveAttendances]="visibleActiveAttendances()"
+          [attendanceHistory]="attendanceHistory()"
           [isMutating]="isMutating()"
           [canManageAttendance]="canManageAttendance()"
           [canSubmitCheckIn]="canSubmitCheckIn()"
           [canViewActiveAttendances]="canViewActiveAttendances()"
+          [canForceCheckOutAttendances]="canForceCheckOutAttendances()"
+          [hasMoreActiveAttendances]="hasMoreActiveAttendances()"
+          [hasMoreAttendanceHistory]="hasMoreAttendanceHistory()"
           (checkInSubmitted)="checkIn()"
           (currentUserCheckOut)="checkOutCurrentUser()"
           (attendanceCheckOut)="checkOut($event)"
+          (attendanceForceCheckOut)="forceCheckOut($event)"
+          (activeAttendancesRequested)="loadMoreActiveAttendances()"
+          (attendanceHistoryRequested)="loadMoreAttendanceHistory()"
         />
       }
 
       @case ('students') {
-        <app-dashboard-users
+        <app-users
           [studentForm]="studentForm"
           [editUserForm]="editUserForm"
           [users]="filteredStudents()"
@@ -113,26 +137,45 @@
           [studentNamePlaceholderKey]="studentNamePlaceholderKey()"
           [studentEmailPlaceholderKey]="studentEmailPlaceholderKey()"
           [studentPasswordPlaceholderKey]="studentPasswordPlaceholderKey()"
+          [hasMoreUsers]="hasMoreUsers()"
           (createUserSubmitted)="createStudent()"
           (updateUserSubmitted)="updateUser()"
           (userEditStarted)="startUserEdit($event)"
           (userEditCanceled)="cancelUserEdit()"
-          (userDeleted)="deleteStudent($event)"
+          (userStatusChanged)="toggleStudentActive($event)"
           (searchChanged)="updateSearchQuery($event)"
           (roleFilterChanged)="updateStudentRoleFilter($event)"
+          (usersRequested)="loadMoreUsers()"
         />
       }
 
       @case ('spaces') {
-        <app-dashboard-spaces
+        <app-spaces
           [spaceForm]="spaceForm"
+          [editSpaceForm]="editSpaceForm"
           [spaces]="spaces()"
+          [isEditingSpace]="isEditingSpace()"
           [canManageResources]="canManageResources()"
           [canSubmitSpace]="canSubmitSpace()"
+          [canSubmitSpaceUpdate]="canSubmitSpaceUpdate()"
+          [hasMoreSpaces]="hasMoreSpaces()"
           (createSpaceSubmitted)="createSpace()"
+          (updateSpaceSubmitted)="updateSpace()"
+          (spaceEditStarted)="startSpaceEdit($event)"
+          (spaceEditCanceled)="cancelSpaceEdit()"
           (spaceDeleted)="deleteSpace($event)"
+          (spacesRequested)="loadMoreSpaces()"
         />
       }
     }
   </main>
+
+  @if (pendingForceCheckOut(); as attendance) {
+    <app-force-checkout-dialog
+      [attendance]="attendance"
+      [isMutating]="isMutating()"
+      (canceled)="cancelForceCheckOut()"
+      (confirmed)="confirmForceCheckOut($event)"
+    />
+  }
 </div>

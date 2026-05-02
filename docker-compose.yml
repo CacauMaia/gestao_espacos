@@ -1,0 +1,57 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-Root@123}
+      MYSQL_DATABASE: ${DB_DATABASE:-gestao_espacos}
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend/be-gestao-espacos
+      dockerfile: Dockerfile
+    working_dir: /usr/src/app
+    volumes:
+      - ./backend/be-gestao-espacos:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-Root@123}
+      DB_DATABASE: ${DB_DATABASE:-gestao_espacos}
+      PORT: 3000
+      RUN_SEED_ADMIN: ${RUN_SEED_ADMIN:-true}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@gestao.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
+
+  frontend:
+    build:
+      context: ./frontend/fe-gestao-espacos
+      dockerfile: Dockerfile
+    working_dir: /usr/src/app
+    volumes:
+      - ./frontend/fe-gestao-espacos:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - '4200:4200'
+    depends_on:
+      - backend
+    environment:
+      CHOKIDAR_USEPOLLING: 'true'
+    command: ['npm', 'run', 'start:docker']
+
+volumes:
+  db-data:

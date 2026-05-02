@@ -4,10 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindManyOptions, FindOptionsWhere, Like, Repository } from 'typeorm';
+import {
+  buildPaginatedResponse,
+  PaginatedResponse,
+  parsePaginationQuery,
+  PaginationQuery,
+} from '../common/pagination/pagination';
 import { Space, SpaceType } from '../entities/space.entity';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
+
+interface ListSpacesQuery extends PaginationQuery {
+  type?: string;
+  search?: string;
+}
 
 @Injectable()
 export class SpacesService {
@@ -24,10 +35,27 @@ export class SpacesService {
     return this.spacesRepository.save(space);
   }
 
-  list(): Promise<Space[]> {
-    return this.spacesRepository.find({
+  async list(
+    query: ListSpacesQuery = {},
+  ): Promise<Space[] | PaginatedResponse<Space>> {
+    const type = this.parseTipoFiltro(query.type);
+    const where = this.buildListWhere(type, query.search);
+    const pagination = parsePaginationQuery(query);
+
+    const findOptions: FindManyOptions<Space> = {
+      where,
       order: { name: 'ASC' },
-    });
+      ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
+    };
+
+    if (!pagination) {
+      return this.spacesRepository.find(findOptions);
+    }
+
+    const [items, totalItems] =
+      await this.spacesRepository.findAndCount(findOptions);
+
+    return buildPaginatedResponse(items, totalItems, pagination);
   }
 
   async findById(id: string): Promise<Space> {
@@ -81,5 +109,31 @@ export class SpacesService {
     if (!Object.values(SpaceType).includes(type)) {
       throw new BadRequestException('Tipo de space inválido.');
     }
+  }
+
+  private parseTipoFiltro(type?: string): SpaceType | undefined {
+    if (type === undefined) {
+      return undefined;
+    }
+
+    this.validarTipo(type as SpaceType);
+
+    return type as SpaceType;
+  }
+
+  private buildListWhere(
+    type?: SpaceType,
+    search?: string,
+  ): FindOptionsWhere<Space> | FindOptionsWhere<Space>[] {
+    const baseWhere: FindOptionsWhere<Space> = {
+      ...(type ? { type } : {}),
+    };
+    const termoBusca = search?.trim();
+
+    if (!termoBusca) {
+      return baseWhere;
+    }
+
+    return [{ ...baseWhere, name: Like(`%${termoBusca}%`) }];
   }
 }

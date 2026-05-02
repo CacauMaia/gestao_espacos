@@ -26,7 +26,7 @@ export function canAccessDashboardSection(section: DashboardSection, role: UserR
   }
 
   if (section === 'attendance') {
-    return role === 'STUDENT' || role === 'MONITOR';
+    return role === 'STUDENT' || role === 'MONITOR' || role === 'ADMIN';
   }
 
   if (section === 'students' || section === 'spaces') {

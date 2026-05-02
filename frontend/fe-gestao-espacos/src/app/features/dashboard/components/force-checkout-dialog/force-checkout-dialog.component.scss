@@ -1,0 +1,97 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(38, 18, 31, 0.46);
+}
+
+.force-checkout-dialog {
+  width: min(30rem, 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: var(--color-surface);
+  box-shadow: 0 1.4rem 4rem rgba(43, 13, 34, 0.28);
+}
+
+.dialog-header,
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.dialog-header {
+  align-items: flex-start;
+}
+
+.dialog-icon {
+  display: grid;
+  flex: 0 0 2.5rem;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.dialog-header h2 {
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.dialog-summary,
+.dialog-field {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.dialog-summary {
+  grid-template-columns: 1fr;
+}
+
+.dialog-summary div {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem;
+  background: var(--color-surface-muted);
+}
+
+.dialog-summary span,
+.dialog-field span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.dialog-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.dialog-field textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.primary-action.danger {
+  background: var(--color-danger);
+}
+
+@media (max-width: 520px) {
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+}

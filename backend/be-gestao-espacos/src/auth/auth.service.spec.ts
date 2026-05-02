@@ -32,6 +32,7 @@ describe('AuthService', () => {
     email: 'ana.souza@example.com',
     password: 'password-hasheada',
     role: UserRole.Student,
+    active: true,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
   };
 
@@ -135,6 +136,20 @@ describe('AuthService', () => {
 
     await expect(
       service.login({ email: user.email, password: 'password-errada' }),
+    ).rejects.toThrow('Credenciais inválidas.');
+    expect(tokenService.sign).not.toHaveBeenCalled();
+    expect(refreshTokensRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('deve bloquear login de user desativado', async () => {
+    usersRepository.findOne.mockResolvedValue({
+      ...user,
+      active: false,
+    });
+    passwordService.compare.mockReturnValue(true);
+
+    await expect(
+      service.login({ email: user.email, password: 'password-teste' }),
     ).rejects.toThrow('Credenciais inválidas.');
     expect(tokenService.sign).not.toHaveBeenCalled();
     expect(refreshTokensRepository.save).not.toHaveBeenCalled();

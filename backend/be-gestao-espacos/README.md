@@ -48,6 +48,12 @@ API disponível em:
 http://localhost:3000
 ```
 
+Documentação Swagger:
+
+```text
+http://localhost:3000/api/docs
+```
+
 ## Seed do Admin
 
 Seed é uma carga inicial de dados. Aqui ele cria o primeiro usuário `ADMIN`, sem abrir cadastro público.
@@ -130,6 +136,7 @@ Política de sessão:
 - `ADMIN`: gerencia estudantes e espaços.
 - `MONITOR`: consulta estudantes, espaços, presenças ativas e registra check-in/check-out.
 - `STUDENT`: consulta espaços, registra check-in/check-out e consulta ocupação.
+- Usuários não-admin podem ser ativados ou desativados por `ADMIN`; usuários desativados não fazem login nem check-in.
 
 ## Fluxo Principal
 
@@ -197,6 +204,66 @@ Authorization: Bearer token
 
 Quando a presença ativa ultrapassa o limite de permanência, a resposta traz uma notificação com a mensagem para deixar o ambiente imediatamente.
 
+## Consultas com filtros e paginação
+
+As listagens de usuários, espaços e presenças ativas mantêm compatibilidade com o frontend atual: sem `page` ou `limit`, retornam um array simples. Quando `page` ou `limit` são enviados, a resposta passa a ter `items` e `meta`.
+
+Usuários:
+
+```http
+GET /users?role=STUDENT&active=true&search=ana&page=1&limit=10
+Authorization: Bearer token
+```
+
+- `role`: `ADMIN`, `MONITOR` ou `STUDENT`.
+- `active`: `true` ou `false`.
+- `search`: busca por nome ou email.
+- `page`: página positiva; padrão `1` quando `limit` é enviado.
+- `limit`: itens por página; padrão `10` e máximo `100`.
+
+Espaços:
+
+```http
+GET /spaces?type=laboratory&search=lab&page=1&limit=10
+Authorization: Bearer token
+```
+
+- `type`: `classroom`, `laboratory` ou `study`.
+- `search`: busca por nome.
+- `page`: página positiva; padrão `1` quando `limit` é enviado.
+- `limit`: itens por página; padrão `10` e máximo `100`.
+
+Resposta paginada:
+
+```json
+{
+  "items": [],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "totalItems": 0,
+    "totalPages": 0,
+    "hasNextPage": false,
+    "hasPreviousPage": false
+  }
+}
+```
+
+Presenças ativas:
+
+```http
+GET /attendances/active?role=STUDENT&spaceType=laboratory&search=ana&page=1&limit=10
+Authorization: Bearer token
+```
+
+- `userId`: filtra por usuário.
+- `spaceId`: filtra por espaço.
+- `role`: `ADMIN`, `MONITOR` ou `STUDENT`.
+- `spaceType`: `classroom`, `laboratory` ou `study`.
+- `search`: busca por nome/email do usuário ou nome do espaço.
+- `page`: página positiva; padrão `1` quando `limit` é enviado.
+- `limit`: itens por página; padrão `10` e máximo `100`.
+
 ## Regras de permanência
 
 No check-in, a API grava `expectedExitAt` na presença ativa.
@@ -206,6 +273,10 @@ No check-in, a API grava `expectedExitAt` na presença ativa.
 - `laboratory`: máximo de 1 hora a partir da entrada.
 
 Além da regra de horário/permanência, o espaço só aceita nova entrada se houver vaga disponível. A API calcula as presenças ativas do espaço e bloqueia o check-in quando `currentOccupancy >= capacity`.
+
+O check-in roda em transação com lock pessimista no usuário e no espaço. Isso evita corrida quando duas entradas simultâneas tentam usar a última vaga ou quando o mesmo usuário tenta entrar em ambientes diferentes ao mesmo tempo.
+
+Internamente, o check-in fica separado em `CheckInUseCase`, `CheckInPolicy` e um port/adaptor de repositório para Attendance. Esse desenho deixa a regra crítica testável sem acoplar o caso de uso diretamente ao TypeORM.
 
 Se `GET /attendances/notifications` for chamado após `expectedExitAt`, o backend registra `overstayNotifiedAt` e retorna a notificação de permanência excedida.
 
@@ -218,8 +289,8 @@ Se `GET /attendances/notifications` for chamado após `expectedExitAt`, o backen
 - `GET /users` `ADMIN`, `MONITOR`
 - `GET /users/students` `ADMIN`, `MONITOR`
 - `GET /users/:id` `ADMIN`, `MONITOR`, `STUDENT`
-- `PATCH /users/:id` `ADMIN`
-- `DELETE /users/:id` `ADMIN`
+- `PATCH /users/:id` `ADMIN`; também ativa/desativa não-admin via `active`
+- `DELETE /users/:id` `ADMIN`; desativa logicamente não-admin
 - `POST /spaces` `ADMIN`
 - `GET /spaces` `ADMIN`, `MONITOR`, `STUDENT`
 - `GET /spaces/:id` `ADMIN`, `MONITOR`, `STUDENT`
@@ -228,6 +299,7 @@ Se `GET /attendances/notifications` for chamado após `expectedExitAt`, o backen
 - `POST /attendances/check-in` `MONITOR`, `STUDENT`
 - `POST /attendances/check-out` `MONITOR`, `STUDENT`
 - `GET /attendances/active` `ADMIN`, `MONITOR`
+- `GET /attendances/current` `MONITOR`, `STUDENT`
 - `GET /attendances/notifications` `MONITOR`, `STUDENT`
 - `GET /attendances/occupancy` `ADMIN`, `MONITOR`, `STUDENT`
 

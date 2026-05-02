@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Like } from 'typeorm';
 import { Space, SpaceType } from '../entities/space.entity';
 import { SpacesService } from './spaces.service';
 
@@ -8,6 +9,7 @@ describe('SpacesService', () => {
   let spacesRepository: {
     findOne: jest.Mock;
     find: jest.Mock;
+    findAndCount: jest.Mock;
     create: jest.Mock;
     merge: jest.Mock;
     save: jest.Mock;
@@ -26,6 +28,7 @@ describe('SpacesService', () => {
     spacesRepository = {
       findOne: jest.fn(),
       find: jest.fn(),
+      findAndCount: jest.fn(),
       create: jest.fn(),
       merge: jest.fn(),
       save: jest.fn(),
@@ -79,5 +82,72 @@ describe('SpacesService', () => {
     await expect(service.findById('space-inexistente')).rejects.toThrow(
       'Space não encontrado.',
     );
+  });
+
+  it('deve atualizar space com dados válidos', async () => {
+    const dto = {
+      name: 'Sala B',
+      type: SpaceType.Classroom,
+      capacity: 30,
+    };
+    const updatedSpace = { ...space, ...dto };
+    spacesRepository.findOne.mockResolvedValue(space);
+    spacesRepository.merge.mockReturnValue(updatedSpace);
+    spacesRepository.save.mockResolvedValue(updatedSpace);
+
+    const result = await service.update(space.id, dto);
+
+    expect(spacesRepository.merge).toHaveBeenCalledWith(space, dto);
+    expect(spacesRepository.save).toHaveBeenCalledWith(updatedSpace);
+    expect(result).toEqual(updatedSpace);
+  });
+
+  it('deve filtrar spaces por tipo e nome', async () => {
+    spacesRepository.find.mockResolvedValue([space]);
+
+    const result = await service.list({
+      type: SpaceType.Laboratory,
+      search: 'Lab',
+    });
+
+    expect(spacesRepository.find).toHaveBeenCalledWith({
+      where: [{ type: SpaceType.Laboratory, name: Like('%Lab%') }],
+      order: { name: 'ASC' },
+    });
+    expect(result).toEqual([space]);
+  });
+
+  it('deve paginar spaces', async () => {
+    spacesRepository.findAndCount.mockResolvedValue([[space], 11]);
+
+    const result = await service.list({
+      page: '2',
+      limit: '5',
+    });
+
+    expect(spacesRepository.findAndCount).toHaveBeenCalledWith({
+      where: {},
+      order: { name: 'ASC' },
+      skip: 5,
+      take: 5,
+    });
+    expect(result).toEqual({
+      items: [space],
+      meta: {
+        page: 2,
+        limit: 5,
+        totalItems: 11,
+        totalPages: 3,
+        hasNextPage: true,
+        hasPreviousPage: true,
+      },
+    });
+  });
+
+  it('deve validar filtro de tipo', async () => {
+    await expect(service.list({ type: 'auditorium' })).rejects.toThrow(
+      'Tipo de space inválido.',
+    );
+    expect(spacesRepository.find).not.toHaveBeenCalled();
   });
 });

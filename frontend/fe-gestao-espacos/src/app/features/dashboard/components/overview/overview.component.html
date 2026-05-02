@@ -1,50 +1,52 @@
 <section class="section-stack" data-test="overview-section">
   <section class="metrics" [attr.aria-label]="'dashboard.metrics' | transloco" data-test="overview-metrics">
-    <article>
-      <span class="metric-icon"><lucide-icon name="Gauge" size="22" /></span>
-      <div>
+    <article class="metric-card">
+      <span class="metric-icon"><lucide-icon name="Gauge" size="20" /></span>
+      <div class="metric-copy">
         <p>{{ 'dashboard.occupancyRate' | transloco }}</p>
         <strong>{{ occupancyRate() | percent: '1.0-0' }}</strong>
       </div>
     </article>
 
-    <article>
-      <span class="metric-icon"><lucide-icon name="DoorOpen" size="22" /></span>
-      <div>
+    <article class="metric-card">
+      <span class="metric-icon"><lucide-icon name="DoorOpen" size="20" /></span>
+      <div class="metric-copy">
         <p>{{ 'dashboard.activePresences' | transloco }}</p>
         <strong>{{ activeAttendanceCount() }}</strong>
       </div>
     </article>
 
-    <article>
-      <span class="metric-icon"><lucide-icon name="Users" size="22" /></span>
-      <div>
+    <article class="metric-card">
+      <span class="metric-icon"><lucide-icon name="Users" size="20" /></span>
+      <div class="metric-copy">
         <p>{{ 'dashboard.registeredStudents' | transloco }}</p>
         <strong>{{ registeredUsersCount() }}</strong>
       </div>
     </article>
 
-    <article>
-      <span class="metric-icon"><lucide-icon name="Building2" size="22" /></span>
-      <div>
+    <article class="metric-card">
+      <span class="metric-icon"><lucide-icon name="Building2" size="20" /></span>
+      <div class="metric-copy">
         <p>{{ 'dashboard.totalCapacity' | transloco }}</p>
         <strong>{{ currentOccupancy() }} / {{ totalCapacity() }}</strong>
       </div>
     </article>
   </section>
 
-  <section class="charts-grid" [attr.aria-label]="'dashboard.charts.label' | transloco" data-test="overview-charts">
-    <article class="panel chart-panel occupancy-summary">
-      <div>
+  <section class="occupancy-board panel" [attr.aria-label]="'dashboard.charts.label' | transloco" data-test="overview-charts">
+    <article class="board-summary">
+      <div class="board-heading">
         <p class="eyebrow">{{ 'dashboard.charts.capacityUsage' | transloco }}</p>
         <h2>{{ 'dashboard.charts.occupancyOverview' | transloco }}</h2>
       </div>
 
-      <div class="donut-chart" [style.background]="occupancyDonutBackground()">
-        <span>{{ occupancyRate() | percent: '1.0-0' }}</span>
+      <div class="donut-wrap">
+        <div class="donut-chart" [style.background]="occupancyDonutBackground()">
+          <span>{{ occupancyRate() | percent: '1.0-0' }}</span>
+        </div>
       </div>
 
-      <dl class="chart-legend">
+      <dl class="summary-grid">
         <div>
           <dt>{{ 'dashboard.charts.occupied' | transloco }}</dt>
           <dd>{{ currentOccupancy() }}</dd>
@@ -56,22 +58,29 @@
       </dl>
     </article>
 
-    <article class="panel chart-panel">
-      <div>
-        <p class="eyebrow">{{ 'dashboard.charts.bySpace' | transloco }}</p>
-        <h2>{{ 'dashboard.charts.occupancyBySpace' | transloco }}</h2>
+    <article class="board-detail">
+      <div class="board-heading horizontal">
+        <div>
+          <p class="eyebrow">{{ 'dashboard.charts.bySpace' | transloco }}</p>
+          <h2>{{ 'dashboard.charts.occupancyBySpace' | transloco }}</h2>
+        </div>
+        <strong>{{ occupancyRate() | percent: '1.0-0' }}</strong>
       </div>
 
-      <div class="bar-chart">
+      <div class="bar-list">
         @for (item of occupancyChartItems(); track item.spaceId) {
           <div class="bar-row">
             <div class="bar-row-header">
               <strong>{{ item.name }}</strong>
-              <span>{{ item.currentOccupancy }} / {{ item.capacity }}</span>
+              <span>{{ item.occupancyPercentage }}%</span>
             </div>
             <span class="bar-track">
               <span class="bar-fill" [style.width.%]="item.occupancyPercentage"></span>
             </span>
+            <div class="bar-row-footer">
+              <span>{{ item.currentOccupancy }} / {{ item.capacity }}</span>
+              <span>{{ item.availableSlots }} {{ 'dashboard.charts.available' | transloco }}</span>
+            </div>
           </div>
         } @empty {
           <p class="empty-state">{{ 'dashboard.charts.empty' | transloco }}</p>
@@ -80,11 +89,11 @@
     </article>
   </section>
 
-  <nav class="section-menu" [attr.aria-label]="'dashboard.sections.label' | transloco" data-test="overview-section-menu">
+  <nav class="section-menu panel" [attr.aria-label]="'dashboard.sections.label' | transloco" data-test="overview-section-menu">
     @for (card of sectionCards(); track card.id) {
       @if (card.id !== 'overview') {
         <button type="button" class="section-card" (click)="selectSection(card.id)">
-          <span class="metric-icon"><lucide-icon [name]="card.icon" size="20" /></span>
+          <span class="metric-icon"><lucide-icon [name]="card.icon" size="18" /></span>
           <span>
             <strong>{{ card.titleKey | transloco }}</strong>
             <small>{{ card.descriptionKey | transloco }}</small>

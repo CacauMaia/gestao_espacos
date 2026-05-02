@@ -7,14 +7,21 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TokenPayload } from '../auth/services/token.service';
 import { UserRole } from '../entities/user.entity';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
+@ApiTags('users')
+@ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -26,14 +33,14 @@ export class UsersController {
 
   @Roles(UserRole.Admin, UserRole.Monitor)
   @Get()
-  list(@Query('role') role?: UserRole, @Query('search') search?: string) {
-    return this.usersService.list(role, search);
+  list(@Query() query: ListUsersQueryDto) {
+    return this.usersService.list(query);
   }
 
   @Roles(UserRole.Admin, UserRole.Monitor)
   @Get('students')
   listStudents() {
-    return this.usersService.list(UserRole.Student);
+    return this.usersService.list({ role: UserRole.Student });
   }
 
   @Roles(UserRole.Admin, UserRole.Monitor, UserRole.Student)
@@ -50,7 +57,10 @@ export class UsersController {
 
   @Roles(UserRole.Admin)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Req() request: Request & { user: TokenPayload },
+    @Param('id') id: string,
+  ) {
+    return this.usersService.remove(id, request.user);
   }
 }

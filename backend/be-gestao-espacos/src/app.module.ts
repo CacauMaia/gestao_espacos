@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { SpacesModule } from './spaces/spaces.module';
@@ -9,9 +10,12 @@ import { AuthModule } from './auth/auth.module';
 import { AuthTokenGuard } from './auth/guards/auth-token.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AttendancesModule } from './attendances/attendances.module';
+import { HttpExceptionFilter } from './common/errors/http-exception.filter';
+import { RequestLoggingInterceptor } from './common/logging/request-logging.interceptor';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST ?? 'localhost',
@@ -37,6 +41,14 @@ import { AttendancesModule } from './attendances/attendances.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestLoggingInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })

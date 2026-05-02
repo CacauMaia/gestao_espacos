@@ -1,0 +1,48 @@
+.student-row.space-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.student-row.space-row > .space-info {
+  min-width: 0;
+}
+
+.space-title,
+.student-row.space-row > .space-actions {
+  display: flex;
+  align-items: center;
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.space-title {
+  gap: 0.55rem;
+}
+
+.space-title strong {
+  min-width: 0;
+}
+
+.student-row.space-row > .space-actions {
+  justify-self: end;
+}
+
+@media (max-width: 560px) {
+  .student-row.space-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .student-row.space-row > .space-actions {
+    justify-self: start;
+  }
+
+  .form-actions {
+    grid-template-columns: 1fr;
+  }
+}

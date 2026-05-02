@@ -4,30 +4,34 @@ import { FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideAngularModule } from 'lucide-angular';
-import { Subject, Observable, debounceTime, distinctUntilChanged, finalize, forkJoin, of } from 'rxjs';
+import { Subject, Observable, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserRole } from '../../core/auth/auth.interfaces';
 import { StatusPillComponent } from '../../shared/ui/status-pill.component';
-import { DashboardAttendanceComponent } from './components/dashboard-attendance.component';
-import { DashboardOverviewComponent } from './components/dashboard-overview.component';
-import { DashboardSpacesComponent } from './components/dashboard-spaces.component';
-import { DashboardUsersComponent } from './components/dashboard-users.component';
-import { Attendance, AttendanceNotification, CreateSpacePayload, CreateUserPayload, Occupancy, Space, User } from './dashboard.interfaces';
-import { DashboardService } from './dashboard.service';
-import { visibleAttendancesForMonitor } from './helpers/dashboard-attendance.helper';
-import { buildOccupancyChartItems, buildOccupancyDonutBackground } from './helpers/dashboard-charts.helper';
+import { AttendanceComponent } from './components/attendance/attendance.component';
+import { ForceCheckoutDialogComponent } from './components/force-checkout-dialog/force-checkout-dialog.component';
+import { OverviewComponent } from './components/overview/overview.component';
+import { SpacesComponent } from './components/spaces/spaces.component';
+import { UsersComponent } from './components/users/users.component';
+import { Attendance, CreateSpacePayload, CreateUserPayload, Space, UpdateSpacePayload, User } from './dashboard.interfaces';
+import { AttendanceFacade } from './facades/attendance.facade';
+import { SpacesFacade } from './facades/spaces.facade';
+import { UsersFacade } from './facades/users.facade';
 import { createCheckInForm, createEditUserForm, createSpaceForm, createStudentForm } from './helpers/dashboard-forms.helper';
-import { extractBackendErrorMessage } from './helpers/dashboard-http-error.helper';
 import { resetDashboardSectionState } from './helpers/dashboard-section-state.helper';
 import { canAccessDashboardSection, DASHBOARD_SECTION_CARDS, DashboardSection, defaultDashboardSection } from './helpers/dashboard-sections.helper';
 import { StudentRoleFilter } from './helpers/dashboard-student-filter.helper';
 import { buildUpdateUserPayload, filterUsersByRole, getUserInitials } from './helpers/dashboard-users.helper';
-
-interface SectionNotice { message: string; section: DashboardSection; translate: boolean; }
+import { DashboardDataState } from './state/dashboard-data.state';
+import { DashboardFeedbackState } from './state/dashboard-feedback.state';
+import { AttendanceState } from './state/attendance.state';
+import { SpacesState } from './state/spaces.state';
+import { UsersState } from './state/users.state';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [TranslocoPipe, LucideAngularModule, StatusPillComponent, DashboardOverviewComponent, DashboardAttendanceComponent, DashboardUsersComponent, DashboardSpacesComponent],
+  imports: [TranslocoPipe, LucideAngularModule, StatusPillComponent, OverviewComponent, AttendanceComponent, ForceCheckoutDialogComponent, UsersComponent, SpacesComponent],
+  providers: [UsersState, SpacesState, AttendanceState, DashboardDataState, DashboardFeedbackState],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
   encapsulation: ViewEncapsulation.None,
@@ -36,9 +40,13 @@ interface SectionNotice { message: string; section: DashboardSection; translate:
 export class DashboardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly dashboardService = inject(DashboardService);
+  private readonly usersFacade = inject(UsersFacade);
+  private readonly spacesFacade = inject(SpacesFacade);
+  private readonly attendanceFacade = inject(AttendanceFacade);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly dataState = inject(DashboardDataState);
+  private readonly feedbackState = inject(DashboardFeedbackState);
   private readonly userSearchTerms = new Subject<string>();
 
   protected readonly currentUser = this.authService.currentUser;
@@ -47,135 +55,88 @@ export class DashboardComponent {
   protected readonly studentRoleFilter = signal<StudentRoleFilter>('ALL');
   protected readonly activeSection = signal<DashboardSection>('overview');
   protected readonly editingUserId = signal<string | null>(null);
-  protected readonly notifications = signal<AttendanceNotification[]>([]);
+  protected readonly editingSpaceId = signal<string | null>(null);
+  protected readonly pendingForceCheckOut = signal<Attendance | null>(null);
+  protected readonly notifications = this.dataState.notifications;
 
-  private readonly feedback = signal<SectionNotice | null>(null);
-  private readonly error = signal<SectionNotice | null>(null);
   private readonly sectionCards = DASHBOARD_SECTION_CARDS;
 
   protected readonly activeSectionCard = computed(() => this.sectionCards.find((card) => card.id === this.activeSection()) ?? this.sectionCards[0]);
-  protected readonly visibleFeedbackKey = computed(() => this.noticeKeyForActiveSection(this.feedback()));
-  protected readonly visibleErrorKey = computed(() => this.noticeKeyForActiveSection(this.error()));
-  protected readonly visibleErrorMessage = computed(() => this.noticeMessageForActiveSection(this.error()));
+  protected readonly visibleToast = this.feedbackState.visibleToast(this.activeSection);
   private readonly currentRole = computed<UserRole | null>(() => this.currentUser()?.role ?? null);
   protected readonly canManageResources = computed(() => this.currentRole() === 'ADMIN');
   protected readonly canManageAttendance = computed(() => this.currentRole() === 'STUDENT' || this.currentRole() === 'MONITOR');
-  protected readonly canViewActiveAttendances = computed(() => this.currentRole() === 'MONITOR');
+  protected readonly canViewActiveAttendances = computed(() => this.currentRole() === 'MONITOR' || this.currentRole() === 'ADMIN');
+  protected readonly canForceCheckOutAttendances = computed(() => this.currentRole() === 'MONITOR' || this.currentRole() === 'ADMIN');
 
   protected readonly visibleSectionCards = computed(() => this.sectionCards.filter((card) => this.canAccessSection(card.id)));
   protected readonly currentUserInitials = computed(() => getUserInitials(this.currentUser()?.name));
 
-  protected readonly students = signal<User[]>([]);
-  protected readonly spaces = signal<Space[]>([]);
-  private readonly activeAttendances = signal<Attendance[]>([]);
-  protected readonly occupancy = signal<Occupancy[]>([]);
+  protected readonly students = this.dataState.students;
+  protected readonly spaces = this.dataState.spaces;
+  private readonly activeAttendances = this.dataState.activeAttendances;
+  protected readonly attendanceHistory = this.dataState.attendanceHistory;
+  protected readonly usersPaginationMeta = this.dataState.usersPaginationMeta;
+  protected readonly spacesPaginationMeta = this.dataState.spacesPaginationMeta;
+  protected readonly activeAttendancesPaginationMeta = this.dataState.activeAttendancesPaginationMeta;
+  protected readonly attendanceHistoryPaginationMeta = this.dataState.attendanceHistoryPaginationMeta;
+  protected readonly currentAttendance = this.dataState.currentAttendance;
+  protected readonly occupancy = this.dataState.occupancy;
 
   protected readonly studentForm = createStudentForm(this.formBuilder);
   protected readonly editUserForm = createEditUserForm(this.formBuilder);
-  private readonly selectedStudentRole = toSignal(this.studentForm.controls.role.valueChanges, {
-    initialValue: this.studentForm.controls.role.value,
-  });
-  private readonly studentFormStatus = toSignal(this.studentForm.statusChanges, {
-    initialValue: this.studentForm.status,
-  });
+  private readonly selectedStudentRole = toSignal(this.studentForm.controls.role.valueChanges, { initialValue: this.studentForm.controls.role.value });
+  private readonly studentFormStatus = toSignal(this.studentForm.statusChanges, { initialValue: this.studentForm.status });
 
   protected readonly studentNamePlaceholderKey = computed(() => `students.placeholders.${this.selectedStudentRole()}.name`);
   protected readonly studentEmailPlaceholderKey = computed(() => `students.placeholders.${this.selectedStudentRole()}.email`);
   protected readonly studentPasswordPlaceholderKey = computed(() => `students.placeholders.${this.selectedStudentRole()}.password`);
-  protected readonly canSubmitStudent = computed(() =>
-    this.studentFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources(),
-  );
-  private readonly editUserFormStatus = toSignal(this.editUserForm.statusChanges, {
-    initialValue: this.editUserForm.status,
-  });
-  protected readonly canSubmitUserUpdate = computed(() =>
-    Boolean(this.editingUserId()) && this.editUserFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources(),
-  );
+  protected readonly canSubmitStudent = computed(() => this.studentFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources());
+  private readonly editUserFormStatus = toSignal(this.editUserForm.statusChanges, { initialValue: this.editUserForm.status });
+  protected readonly canSubmitUserUpdate = computed(() => Boolean(this.editingUserId()) && this.editUserFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources());
   protected readonly isEditingUser = computed(() => Boolean(this.editingUserId()));
 
   protected readonly spaceForm = createSpaceForm(this.formBuilder);
-  private readonly spaceFormStatus = toSignal(this.spaceForm.statusChanges, {
-    initialValue: this.spaceForm.status,
-  });
-  protected readonly canSubmitSpace = computed(() =>
-    this.spaceFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources(),
-  );
+  private readonly spaceFormStatus = toSignal(this.spaceForm.statusChanges, { initialValue: this.spaceForm.status });
+  protected readonly editSpaceForm = createSpaceForm(this.formBuilder);
+  private readonly editSpaceFormStatus = toSignal(this.editSpaceForm.statusChanges, { initialValue: this.editSpaceForm.status });
+  protected readonly canSubmitSpace = computed(() => this.spaceFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources());
+  protected readonly canSubmitSpaceUpdate = computed(() => Boolean(this.editingSpaceId()) && this.editSpaceFormStatus() === 'VALID' && !this.isMutating() && this.canManageResources());
+  protected readonly isEditingSpace = computed(() => Boolean(this.editingSpaceId()));
 
   protected readonly checkInForm = createCheckInForm(this.formBuilder);
-  private readonly checkInFormStatus = toSignal(this.checkInForm.statusChanges, {
-    initialValue: this.checkInForm.status,
-  });
-  protected readonly canSubmitCheckIn = computed(() =>
-    this.checkInFormStatus() === 'VALID' && !this.isMutating() && this.canManageAttendance(),
-  );
+  protected readonly canSubmitCheckIn = computed(() => !this.isMutating() && this.canManageAttendance() && !this.currentAttendance());
 
   protected readonly filteredStudents = computed(() => filterUsersByRole(this.students(), this.studentRoleFilter()));
+  protected readonly hasMoreUsers = computed(() => this.usersPaginationMeta().hasNextPage);
+  protected readonly hasMoreSpaces = computed(() => this.spacesPaginationMeta().hasNextPage);
+  protected readonly hasMoreActiveAttendances = computed(() => this.activeAttendancesPaginationMeta().hasNextPage);
+  protected readonly hasMoreAttendanceHistory = computed(() => this.attendanceHistoryPaginationMeta().hasNextPage);
 
-  protected readonly totalCapacity = computed(() =>
-    this.occupancy().reduce((total, item) => total + item.capacity, 0),
-  );
-
-  protected readonly currentOccupancy = computed(() =>
-    this.occupancy().reduce((total, item) => total + item.currentOccupancy, 0),
-  );
-
-  protected readonly occupancyRate = computed(() => {
-    const capacity = this.totalCapacity();
-    return capacity ? this.currentOccupancy() / capacity : 0;
-  });
-  protected readonly occupancyDonutBackground = computed(() => buildOccupancyDonutBackground(this.occupancyRate()));
-  protected readonly availableCapacity = computed(() => Math.max(0, this.totalCapacity() - this.currentOccupancy()));
-  protected readonly occupancyChartItems = computed(() => buildOccupancyChartItems(this.occupancy()));
-
-  protected readonly visibleActiveAttendances = computed(() => {
-    if (this.currentRole() !== 'MONITOR') {
-      return [];
-    }
-
-    return visibleAttendancesForMonitor(this.activeAttendances(), this.currentUser()?.id);
-  });
-  protected readonly activeAttendanceCount = computed(() => this.currentOccupancy());
+  protected readonly totalCapacity = this.dataState.totalCapacity;
+  protected readonly currentOccupancy = this.dataState.currentOccupancy;
+  protected readonly occupancyRate = this.dataState.occupancyRate;
+  protected readonly occupancyDonutBackground = this.dataState.occupancyDonutBackground;
+  protected readonly availableCapacity = this.dataState.availableCapacity;
+  protected readonly occupancyChartItems = this.dataState.occupancyChartItems;
+  protected readonly visibleActiveAttendances = this.dataState.visibleActiveAttendances(this.currentRole, this.currentUser, this.canViewActiveAttendances);
+  protected readonly activeAttendanceCount = this.dataState.activeAttendanceCount;
   protected readonly notificationCount = computed(() => this.notifications().length);
 
   constructor() {
-    this.userSearchTerms
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((query) => this.loadUsers(query));
+    this.userSearchTerms.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((query) => this.loadUsers(query));
 
     const initialSection = this.defaultSection();
     this.activeSection.set(initialSection);
     this.reloadSection(initialSection);
   }
 
-  protected refreshActiveSection(): void {
-    this.resetSectionState(this.activeSection());
-    this.reloadSection(this.activeSection());
-  }
+  protected refreshActiveSection(): void { this.resetSectionState(this.activeSection()); this.reloadSection(this.activeSection()); }
   protected refreshNotifications(): void { this.loadNotifications(); }
 
   private loadDashboard(): void {
-    this.clearError(this.activeSection());
-
-    forkJoin({
-      students: this.dashboardService.listUsers(this.searchQuery()),
-      spaces: this.dashboardService.listSpaces(),
-      activeAttendances: of([]),
-      occupancy: this.dashboardService.listOccupancy(),
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ students, spaces, activeAttendances, occupancy }) => {
-          this.students.set(students);
-          this.spaces.set(spaces);
-          this.activeAttendances.set(activeAttendances);
-          this.occupancy.set(occupancy);
-        },
-        error: () => this.setError('dashboard.loadError'),
-      });
+    this.feedbackState.clearSection(this.activeSection());
+    this.dataState.loadDashboard(this.searchQuery(), () => this.setError('dashboard.loadError'));
   }
 
   protected createStudent(): void {
@@ -189,7 +150,7 @@ export class DashboardComponent {
       return;
     }
 
-    this.mutate(this.dashboardService.createUser(this.studentForm.getRawValue() as CreateUserPayload), 'students.created', 'students', () => {
+    this.mutate(this.usersFacade.create(this.studentForm.getRawValue() as CreateUserPayload), 'students.created', 'students', () => {
       this.studentForm.reset({ name: '', email: '', password: '', role: 'STUDENT' });
       this.loadUsers();
     });
@@ -213,7 +174,7 @@ export class DashboardComponent {
       return;
     }
 
-    this.mutate(this.dashboardService.updateUser(userId, buildUpdateUserPayload(this.editUserForm)), 'students.updated', 'students', () => {
+    this.mutate(this.usersFacade.update(userId, buildUpdateUserPayload(this.editUserForm)), 'students.updated', 'students', () => {
       this.cancelUserEdit();
       this.loadUsers();
     });
@@ -230,22 +191,53 @@ export class DashboardComponent {
       return;
     }
 
-    this.mutate(this.dashboardService.createSpace(this.spaceForm.getRawValue() as CreateSpacePayload), 'spaces.created', 'spaces', () => {
+    this.mutate(this.spacesFacade.create(this.spaceForm.getRawValue() as CreateSpacePayload), 'spaces.created', 'spaces', () => {
       this.spaceForm.reset({ name: '', type: 'classroom', capacity: 24 });
       this.loadSpaces();
       this.loadOccupancy();
     });
   }
 
-  protected deleteStudent(student: User): void {
+  protected startSpaceEdit(space: Space): void {
+    this.editingSpaceId.set(space.id);
+    this.editSpaceForm.reset({ name: space.name, type: space.type, capacity: space.capacity });
+  }
+
+  protected cancelSpaceEdit(): void {
+    this.editingSpaceId.set(null);
+    this.editSpaceForm.reset({ name: '', type: 'classroom', capacity: 24 });
+  }
+
+  protected updateSpace(): void {
+    const spaceId = this.editingSpaceId();
+
+    if (!spaceId || this.editSpaceForm.invalid || !this.canManageResources()) {
+      this.editSpaceForm.markAllAsTouched();
+      return;
+    }
+
+    this.mutate(this.spacesFacade.update(spaceId, this.editSpaceForm.getRawValue() as UpdateSpacePayload), 'spaces.updated', 'spaces', () => {
+      this.cancelSpaceEdit();
+      this.loadSpaces();
+      this.loadOccupancy();
+    });
+  }
+
+  protected toggleStudentActive(student: User): void {
     if (!this.canManageResources()) {
       this.setError('dashboard.forbidden', 'students');
       return;
     }
 
-    this.mutate(this.dashboardService.deleteUser(student.id), 'students.deleted', 'students', () => {
+    const isActivating = !student.active;
+    const request = isActivating
+      ? this.usersFacade.toggleActive(student.id, true)
+      : this.usersFacade.delete(student);
+
+    this.mutate(request, 'students.updated', 'students', () => {
       this.loadUsers();
       this.loadActiveAttendances();
+      this.loadAttendanceHistory();
       this.loadOccupancy();
     });
   }
@@ -256,7 +248,7 @@ export class DashboardComponent {
       return;
     }
 
-    this.mutate(this.dashboardService.deleteSpace(space.id), 'spaces.deleted', 'spaces', () => {
+    this.mutate(this.spacesFacade.delete(space.id), 'spaces.deleted', 'spaces', () => {
       this.loadSpaces();
       this.loadActiveAttendances();
       this.loadOccupancy();
@@ -275,10 +267,12 @@ export class DashboardComponent {
     }
 
     const payload = this.checkInForm.getRawValue();
-    this.mutate(this.dashboardService.checkIn(this.currentUser()?.id ?? '', payload.spaceId), 'attendance.checkedIn', 'attendance', () => {
+    this.mutate(this.attendanceFacade.checkIn(payload.spaceId), 'attendance.checkedIn', 'attendance', () => {
       this.checkInForm.reset({ spaceId: '' });
+      this.loadCurrentAttendance();
       this.loadNotifications();
       this.loadActiveAttendances();
+      this.loadAttendanceHistory();
       this.loadOccupancy();
     });
   }
@@ -289,24 +283,56 @@ export class DashboardComponent {
       return;
     }
 
-    this.mutate(this.dashboardService.checkOut(attendance.userId), 'attendance.checkedOut', 'attendance', () => {
+    this.mutate(this.attendanceFacade.checkOut(), 'attendance.checkedOut', 'attendance', () => {
+      this.currentAttendance.set(null);
       this.loadNotifications();
       this.loadActiveAttendances();
+      this.loadAttendanceHistory();
       this.loadOccupancy();
     });
   }
 
   protected checkOutCurrentUser(): void {
-    const userId = this.currentUser()?.id;
-
-    if (!userId || !this.canManageAttendance()) {
+    if (!this.currentUser()?.id || !this.canManageAttendance()) {
       this.setError('dashboard.forbidden', 'attendance');
       return;
     }
 
-    this.mutate(this.dashboardService.checkOut(userId), 'attendance.checkedOut', 'attendance', () => {
+    this.mutate(this.attendanceFacade.checkOut(), 'attendance.checkedOut', 'attendance', () => {
+      this.currentAttendance.set(null);
       this.loadNotifications();
       this.loadActiveAttendances();
+      this.loadAttendanceHistory();
+      this.loadOccupancy();
+    });
+  }
+
+  protected forceCheckOut(attendance: Attendance): void {
+    if (!this.canForceCheckOutAttendances()) {
+      this.setError('dashboard.forbidden', 'attendance');
+      return;
+    }
+
+    this.pendingForceCheckOut.set(attendance);
+  }
+
+  protected cancelForceCheckOut(): void { if (!this.isMutating()) { this.pendingForceCheckOut.set(null); } }
+
+  protected confirmForceCheckOut(note: string): void {
+    const attendance = this.pendingForceCheckOut();
+
+    if (!attendance || !this.canForceCheckOutAttendances()) {
+      this.setError('dashboard.forbidden', 'attendance');
+      return;
+    }
+
+    const normalizedNote = note.trim() || undefined;
+    this.mutate(this.attendanceFacade.forceCheckOut(attendance.id, normalizedNote), 'attendance.forcedCheckOut', 'attendance', () => {
+      this.pendingForceCheckOut.set(null);
+      this.loadCurrentAttendance();
+      this.loadNotifications();
+      this.loadActiveAttendances();
+      this.loadAttendanceHistory();
       this.loadOccupancy();
     });
   }
@@ -323,7 +349,13 @@ export class DashboardComponent {
 
   protected updateStudentRoleFilter(role: string): void {
     this.studentRoleFilter.set(role as StudentRoleFilter);
+    this.loadUsers(this.searchQuery());
   }
+
+  protected loadMoreUsers(): void { this.loadUsers(this.searchQuery(), true); }
+  protected loadMoreSpaces(): void { this.loadSpaces(true); }
+  protected loadMoreActiveAttendances(): void { this.loadActiveAttendances(true); }
+  protected loadMoreAttendanceHistory(): void { this.loadAttendanceHistory(true); }
 
   protected selectSection(section: DashboardSection): void {
     if (!this.canAccessSection(section)) {
@@ -347,84 +379,81 @@ export class DashboardComponent {
     onSuccess?: () => void,
   ): void {
     this.isMutating.set(true);
-    this.clearFeedback(section);
-    this.clearError(section);
+    this.feedbackState.clearSection(section);
 
     request$
       .pipe(finalize(() => this.isMutating.set(false)))
       .subscribe({
         next: () => {
           onSuccess?.();
-          this.setFeedback(successKey, section);
+          this.feedbackState.setFeedback(successKey, section);
         },
-        error: (error: unknown) => this.setActionError(error, section),
+        error: (error: unknown) => this.feedbackState.setActionError(error, section),
       });
   }
 
-  private loadUsers(search = this.searchQuery()): void {
-    if (this.currentRole() !== 'ADMIN') {
-      const currentUser = this.currentUser();
-      this.students.set(currentUser ? [currentUser] : []);
-      return;
-    }
-
-    this.dashboardService.listUsers(search).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (users) => this.students.set(users),
-      error: () => this.setError('dashboard.loadError', 'students'),
-    });
+  private loadUsers(search = this.searchQuery(), append = false): void {
+    this.dataState.loadUsers({
+      currentRole: this.currentRole(),
+      currentUser: this.currentUser(),
+      roleFilter: this.studentRoleFilter(),
+      search,
+      append,
+    }, () => this.setError('dashboard.loadError', 'students'));
   }
 
-  private loadSpaces(): void {
-    this.dashboardService.listSpaces().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (spaces) => this.spaces.set(spaces),
-      error: () => this.setError('dashboard.loadError', 'spaces'),
-    });
+  private loadSpaces(append = false, paginated = this.activeSection() === 'spaces'): void {
+    this.dataState.loadSpaces(append, paginated, () => this.setError('dashboard.loadError', 'spaces'));
   }
 
-  private loadActiveAttendances(): void {
-    if (!this.canViewActiveAttendances()) {
-      this.activeAttendances.set([]);
-      return;
-    }
+  private loadActiveAttendances(append = false): void {
+    this.dataState.loadActiveAttendances({
+      currentRole: this.currentRole(),
+      currentAttendance: this.currentAttendance(),
+      canViewActiveAttendances: this.canViewActiveAttendances(),
+      append,
+    }, () => this.setError('dashboard.loadError', 'attendance'));
+  }
 
-    this.dashboardService.listActiveAttendances().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (attendances) => this.activeAttendances.set(attendances),
-      error: () => this.setError('dashboard.loadError', 'attendance'),
-    });
+  private loadAttendanceHistory(append = false): void {
+    this.dataState.loadAttendanceHistory(append, () => this.setError('dashboard.loadError', 'attendance'));
+  }
+
+  private loadCurrentAttendance(): void {
+    this.dataState.loadCurrentAttendance(
+      this.canManageAttendance(),
+      () => {
+        this.loadActiveAttendances();
+        this.loadAttendanceHistory();
+      },
+      () => this.setError('dashboard.loadError', 'attendance'),
+    );
   }
 
   private loadOccupancy(): void {
-    this.dashboardService.listOccupancy().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (occupancy) => this.occupancy.set(occupancy),
-      error: () => this.setError('dashboard.loadError'),
-    });
+    this.dataState.loadOccupancy(() => this.setError('dashboard.loadError'));
   }
 
   private loadNotifications(): void {
-    if (!this.canManageAttendance()) {
-      this.notifications.set([]);
-      return;
-    }
-
-    this.dashboardService.listAttendanceNotifications().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (notifications) => this.notifications.set(notifications),
-      error: () => this.setError('dashboard.loadError', 'attendance'),
-    });
+    this.dataState.loadNotifications(this.canManageAttendance(), () => this.setError('dashboard.loadError', 'attendance'));
   }
 
   private resetSectionState(section: DashboardSection): void {
-    this.clearFeedback(section);
-    this.clearError(section);
+    this.feedbackState.clearSection(section);
+    this.cancelSpaceEdit();
     resetDashboardSectionState(section, {
       searchQuery: this.searchQuery,
       studentRoleFilter: this.studentRoleFilter,
       studentForm: this.studentForm,
       editUserForm: this.editUserForm,
       spaceForm: this.spaceForm,
+      editSpaceForm: this.editSpaceForm,
       checkInForm: this.checkInForm,
       students: this.students,
       spaces: this.spaces,
       activeAttendances: this.activeAttendances,
+      attendanceHistory: this.attendanceHistory,
+      currentAttendance: this.currentAttendance,
       occupancy: this.occupancy,
     });
   }
@@ -436,14 +465,14 @@ export class DashboardComponent {
     }
 
     if (section === 'spaces') {
-      this.loadSpaces();
+      this.loadSpaces(false, true);
       this.loadOccupancy();
       return;
     }
 
     if (section === 'attendance') {
-      this.loadSpaces();
-      this.loadActiveAttendances();
+      this.loadSpaces(false, false);
+      this.loadCurrentAttendance();
       this.loadOccupancy();
       this.loadNotifications();
       return;
@@ -452,47 +481,13 @@ export class DashboardComponent {
     this.loadDashboard();
   }
 
-  private setFeedback(key: string, section = this.activeSection()): void {
-    this.feedback.set({ message: key, section, translate: true });
-  }
+  private setError(key: string, section = this.activeSection()): void { this.feedbackState.setError(key, section); }
 
-  private setError(key: string, section = this.activeSection()): void {
-    this.error.set({ message: key, section, translate: true });
-  }
+  protected dismissToast(): void { this.feedbackState.dismiss(this.activeSection()); }
 
-  private setActionError(error: unknown, section: DashboardSection): void {
-    const message = extractBackendErrorMessage(error);
-    this.error.set({ message: message ?? 'dashboard.actionError', section, translate: !message });
-  }
-  private clearFeedback(section: DashboardSection): void {
-    if (this.feedback()?.section === section) {
-      this.feedback.set(null);
-    }
-  }
+  private defaultSection(): DashboardSection { return defaultDashboardSection(this.currentRole()); }
 
-  private clearError(section: DashboardSection): void {
-    if (this.error()?.section === section) {
-      this.error.set(null);
-    }
-  }
+  private canAccessSection(section: DashboardSection): boolean { return canAccessDashboardSection(section, this.currentRole()); }
 
-  private noticeKeyForActiveSection(notice: SectionNotice | null): string | null {
-    return notice?.section === this.activeSection() && notice.translate ? notice.message : null;
-  }
-
-  private noticeMessageForActiveSection(notice: SectionNotice | null): string | null {
-    return notice?.section === this.activeSection() && !notice.translate ? notice.message : null;
-  }
-
-  private defaultSection(): DashboardSection {
-    return defaultDashboardSection(this.currentRole());
-  }
-
-  private canAccessSection(section: DashboardSection): boolean {
-    return canAccessDashboardSection(section, this.currentRole());
-  }
-
-  private canCheckOutAttendance(attendance: Attendance): boolean {
-    return this.canManageAttendance() && attendance.userId === this.currentUser()?.id;
-  }
+  private canCheckOutAttendance(attendance: Attendance): boolean { return this.canManageAttendance() && attendance.userId === this.currentUser()?.id; }
 }
